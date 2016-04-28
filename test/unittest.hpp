@@ -11,7 +11,7 @@
 
 #include "gtest.h"
 
-#include "fastupdate_formula.h"
+#include "fastupdate_formula.hpp"
 
 template<typename Derived>
 inline int num_cols(const Eigen::MatrixBase<Derived> &m) {
