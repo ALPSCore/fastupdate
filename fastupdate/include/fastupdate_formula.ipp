@@ -91,10 +91,10 @@ namespace alps {
         invA.conservative_resize(N + M, N + M);//this keeps the contents in the left corner of invA
 
         //compute G
-        invA.block(N, 0, M, N) = -H * C_invA;
+        invA.block(N, 0, M, N).noalias() = -H * C_invA;
 
         //compute E
-        invA.block(0, 0, N, N) -= invA_B * invA.block(N, 0, M, N);
+        invA.block(0, 0, N, N).noalias() -= invA_B * invA.block(N, 0, M, N);
 
         invA.block(0, N, N, M) = F;
         invA.block(N, N, M, M) = H;
@@ -186,7 +186,8 @@ namespace alps {
       //Step 2: update the inverse matrix and shrink it.
       if (N > 0) {
         //E -= F*H^{-1}*G
-        invG.block(0, 0, N, N) -=
+        //(N,M)x(M,M)x(M,N)
+        invG.block(0, 0, N, N).noalias() -=
           invG.block(0, N, N, M) *
           invG.block(N, N, M, M).inverse() *
           invG.block(N, 0, M, N);
@@ -203,59 +204,80 @@ namespace alps {
   namespace fastupdate {
 
     template<typename Scalar, typename M0, typename M1, typename M2>
-    ReplaceHelper<Scalar,M0,M1,M2>::ReplaceHelper(ResizableMatrix<Scalar>& invG, const M0& Q, const M1& R, const M2& S) :
-      invG_(invG), Q_(Q), R_(R), S_(S), N_(num_cols(R)), M_(num_rows(R)), M_old_(num_cols(invG)-N_) {
-      assert(num_cols(invG_)==num_rows(invG_));
-      assert(num_rows(R_)==M_ && num_cols(R_)==N_);
-      assert(num_rows(Q_)==N_ && num_cols(Q_)==M_);
-      assert(num_rows(S_)==M_ && num_cols(S_)==M_);
+    ReplaceHelper<Scalar,M0,M1,M2>::ReplaceHelper(ResizableMatrix<Scalar>& invG,
+                                                  const M0& Q,
+                                                  const M1& R,
+                                                  const M2& S) :
+      //invG_(invG),
+      //Q_(Q),
+      //R_(R),
+      //S_(S),
+      N_(num_cols(R)),
+      M_(num_rows(R)),
+      M_old_(num_cols(invG)-N_)
+    {
+      assert(num_cols(invG)==num_rows(invG));
+      assert(num_rows(R)==M_ && num_cols(R)==N_);
+      assert(num_rows(Q)==N_ && num_cols(Q)==M_);
+      assert(num_rows(S)==M_ && num_cols(S)==M_);
     }
 
     template<typename Scalar, typename M0, typename M1, typename M2>
-    Scalar ReplaceHelper<Scalar,M0,M1,M2>::compute_det_ratio() {
+    Scalar ReplaceHelper<Scalar,M0,M1,M2>::compute_det_ratio(ResizableMatrix<Scalar>& invG,
+                                                             const M0& Q,
+                                                             const M1& R,
+                                                             const M2& S) {
       if (N_ == 0) {
-        return S_.determinant()*invG_.determinant();
+        return S.determinant()*invG.determinant();
       }
 
-      block_t tP_view (invG_.block(0,  0,  N_,     N_     ));
-      block_t tQ_view (invG_.block(0,  N_, N_,     M_old_ ));
-      block_t tR_view (invG_.block(N_, 0,  M_old_, N_     ));
-      block_t tS_view (invG_.block(N_, N_, M_old_, M_old_ ));
+      block_t tP_view (invG.block(0,  0,  N_,     N_     ));
+      block_t tQ_view (invG.block(0,  N_, N_,     M_old_ ));
+      block_t tR_view (invG.block(N_, 0,  M_old_, N_     ));
+      block_t tS_view (invG.block(N_, N_, M_old_, M_old_ ));
 
       //matrix M
-      Mmat_ = tP_view - tQ_view * tS_view.inverse() * tR_view;
+      Mmat_ = tP_view;
+      Mmat_.noalias() -= tQ_view * tS_view.inverse() * tR_view; //(N, M_old) x (M_old, M_old) x (M_old, N)
 
       //(tS')^{-1}
-      inv_tSp_ = S_ - R_ * Mmat_ * Q_;
+      inv_tSp_ = S;
+      inv_tSp_.noalias() -= R * (Mmat_ * Q).eval(); //(M,N)x(N,N)x(N,M)
 
       return tS_view.determinant()*inv_tSp_.determinant();
     }
 
     template<typename Scalar, typename M0, typename M1, typename M2>
-    void ReplaceHelper<Scalar,M0,M1,M2>::compute_inverse_matrix() {
+    void ReplaceHelper<Scalar,M0,M1,M2>::compute_inverse_matrix(ResizableMatrix<Scalar>& invG,
+                                                                const M0& Q,
+                                                                const M1& R,
+                                                                const M2& S) {
       if (N_ == 0) {
-        invG_.destructive_resize(M_, M_);
-        invG_.block() = S_.inverse();
+        invG.destructive_resize(M_, M_);
+        invG.block().noalias() = S.inverse();
         return;
       }
 
-      invG_.destructive_resize(N_ + M_, N_ + M_);
-      block_t tPp_view(invG_.block(0,  0,  N_, N_));
-      block_t tQp_view(invG_.block(0,  N_, N_, M_));
-      block_t tRp_view(invG_.block(N_, 0,  M_, N_));
-      block_t tSp_view(invG_.block(N_, N_, M_, M_));
+      invG.destructive_resize(N_ + M_, N_ + M_);
+      block_t tPp_view(invG.block(0,  0,  N_, N_));
+      block_t tQp_view(invG.block(0,  N_, N_, M_));
+      block_t tRp_view(invG.block(N_, 0,  M_, N_));
+      block_t tSp_view(invG.block(N_, N_, M_, M_));
 
       //tSp
-      tSp_view = inv_tSp_.inverse();
+      tSp_view.noalias() = inv_tSp_.inverse();
 
       //tQp
-      tQp_view = -Mmat_ * Q_ * tSp_view;
+      //(N,N)x(N,M)x(M,M) = (N,M)
+      tQp_view.noalias() = -Mmat_ * (Q * tSp_view).eval();
 
       //tRp
-      tRp_view = -tSp_view * R_ * Mmat_;
+      //(M,M)x(M,N)x(N,N)
+      tRp_view.noalias() = -(tSp_view * R).eval() * Mmat_;
 
       //tPp
-      tPp_view = Mmat_ - Mmat_ * Q_ * tRp_view;
+      tPp_view = Mmat_;
+      tPp_view -= (Mmat_ * Q).eval() * tRp_view; //(N,N)x(N,M)x(M,N)
     }
   }
 }

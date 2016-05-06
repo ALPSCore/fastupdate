@@ -109,19 +109,20 @@ namespace alps {
     template<typename Scalar, typename M0, typename M1, typename M2>
     class ReplaceHelper {
     public:
+      ReplaceHelper() {};
       ReplaceHelper(ResizableMatrix<Scalar>& invG, const M0& R, const M1& Q, const M2& S);
-      Scalar compute_det_ratio();
-      void compute_inverse_matrix();
+      Scalar compute_det_ratio(ResizableMatrix<Scalar>& invG, const M0& R, const M1& Q, const M2& S);
+      void compute_inverse_matrix(ResizableMatrix<Scalar>& invG, const M0& R, const M1& Q, const M2& S);
 
     private:
       typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
       typedef Eigen::Block<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> > block_t;
 
-      ResizableMatrix<Scalar>& invG_;
-      const M0& Q_;
-      const M1& R_;
-      const M2& S_;
-      const int N_, M_, M_old_;
+      //ResizableMatrix<Scalar>& invG_;
+      //M0& Q_;
+      //M1& R_;
+      //M2& S_;
+      int N_, M_, M_old_;
 
       eigen_matrix_t Mmat_, inv_tSp_;
     };

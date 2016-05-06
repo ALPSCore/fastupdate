@@ -197,9 +197,17 @@ TEST(FastUpdate, BlockMatrixReplaceLastRowsColsWithDifferentSizes) {
   typedef ReplaceHelper<Scalar, eigen_matrix_t, eigen_matrix_t, eigen_matrix_t> helper_t;
 
   std::vector<int> N_list, M_list, Mold_list;
-  N_list.push_back(10);
+  N_list.push_back(0);
   M_list.push_back(4);
   Mold_list.push_back(5);
+
+  N_list.push_back(2);
+  M_list.push_back(0);
+  Mold_list.push_back(5);
+
+  N_list.push_back(2);
+  M_list.push_back(5);
+  Mold_list.push_back(0);
 
   N_list.push_back(100);
   M_list.push_back(40);
@@ -209,9 +217,9 @@ TEST(FastUpdate, BlockMatrixReplaceLastRowsColsWithDifferentSizes) {
   M_list.push_back(49);
   Mold_list.push_back(20);
 
-  N_list.push_back(100);
-  M_list.push_back(100);
-  Mold_list.push_back(20);
+  //N_list.push_back(100);
+  //M_list.push_back(100);
+  //Mold_list.push_back(20);
 
   for (int n = 0; n < N_list.size(); ++n) {
     for (int m = 0; m < M_list.size(); ++m) {
@@ -244,14 +252,109 @@ TEST(FastUpdate, BlockMatrixReplaceLastRowsColsWithDifferentSizes) {
       helper_t helper(invGprime_fast, Q, R, S);
 
       // compute det ratio
-      const Scalar det_rat_fast = helper.compute_det_ratio();
+      const Scalar det_rat_fast = helper.compute_det_ratio(invGprime_fast, Q, R, S);
       ASSERT_TRUE(std::abs(det_rat-det_rat_fast)/std::abs(det_rat)<1E-8);
 
       // update the inverse matrix
-      helper.compute_inverse_matrix();
+      helper.compute_inverse_matrix(invGprime_fast, Q, R, S);
 
       ASSERT_TRUE(norm_square(inverse(Gprime)-invGprime_fast)<1E-8);
     }
   }
 }
 
+TEST(FastUpdate, DeterminantMatrix) {
+  using namespace alps::fastupdate;
+  typedef std::complex<double> Scalar;
+  const int n_flavors = 3;
+  const double beta = 20.0;
+  typedef DeterminantMatrix<
+    Scalar,
+    OffDiagonalG0<Scalar>,
+    creator,
+    annihilator
+    > determinant_matrix_t;
+  const int seed = 122;
+  boost::mt19937 gen(seed);
+  boost::uniform_01<> unidist;
+  rs_shuffle rs(gen);
+
+  std::vector<double> E(n_flavors);
+  boost::multi_array<Scalar,2> phase(boost::extents[n_flavors][n_flavors]);
+
+  for (int i=0; i<n_flavors; ++i) {
+    E[i] = (double) (i+0.5);
+  }
+  for (int i=0; i<n_flavors; ++i) {
+    for (int j=i; j<n_flavors; ++j) {
+      phase[i][j] = std::exp(std::complex<double>(0.0, 1.*i*(2*j+1.0)));
+      phase[j][i] = std::conj(phase[i][j]);
+    }
+  }
+
+  determinant_matrix_t det_mat(OffDiagonalG0<Scalar>(beta, n_flavors, E, phase));
+
+  std::vector<std::pair<creator,annihilator> > init_ops;
+  for (int i=0; i<10; ++i) {
+    init_ops.push_back(
+      std::make_pair(
+        creator(n_flavors*unidist(gen), unidist(gen)*beta),
+        annihilator(n_flavors*unidist(gen), unidist(gen)*beta)
+      )
+    );
+  }
+
+  const Scalar det_rat = det_mat.try_remove_add(
+    std::vector<std::pair<creator,annihilator> >(),
+    init_ops
+  );
+
+  det_mat.perform_remove_add(
+    std::vector<std::pair<creator,annihilator> >(),
+    init_ops
+  );
+
+  const Scalar det_init = det_mat.compute_determinant();
+  std::cout << "det " << det_init << " " << det_rat << std::endl;
+  ASSERT_TRUE(std::abs(det_init-det_rat)/std::abs(det_rat)<1E-8);
+
+  /*
+   * Now we remove some operators and add some operators
+   */
+  std::vector<std::pair<creator,annihilator> > ops_add;
+  for (int i=0; i<10; ++i) {
+    ops_add.push_back(
+      std::make_pair(creator(0, unidist(gen)*beta), annihilator(0, unidist(gen)*beta))
+    );
+  }
+
+  std::vector<std::pair<creator,annihilator> > ops_rem(init_ops);
+  std::random_shuffle(ops_rem.begin(), ops_rem.end(), rs);
+  //ops_rem.resize(init_ops.size()/2);
+  /*** FOR DEBUG */
+  ops_rem.resize(0);
+
+  const Scalar det_rat2 = det_mat.try_remove_add(
+    ops_rem,
+    ops_add
+  );
+
+  det_mat.perform_remove_add(
+    ops_rem,
+    ops_add
+  );
+
+  const Scalar det2 = det_mat.compute_determinant();
+  std::cout << det2 << " " << det_init << " " << det_rat2 << std::endl;
+  std::cout << det2/det_init << " " << det_rat2 << std::endl;
+  ASSERT_TRUE(std::abs(det2/det_init-det_rat2)/std::abs(det_rat2)<1E-8);
+
+  //std::vector<std::pair<creator,annihilator> > ops_rem;
+  //ops_rem.push_back(
+    //std::make_pair(creator(0, 0.1*beta), annihilator(0, 0.2*beta))
+  //);
+
+  /* initialize submatrix_update */
+  //SubmatrixUpdate<Scalar> submatrix_update(k_ins_max, n_flavors, DiagonalG0<T>(beta), &Uijkl, beta, itime_vertices_init);
+  //SubmatrixUpdate<T> submatrix_update(k_ins_max, n_flavors, OffDiagonalG0<T>(beta, n_sites, E, phase), &Uijkl, beta, itime_vertices_init);
+}
