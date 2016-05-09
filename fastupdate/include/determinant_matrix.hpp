@@ -38,6 +38,7 @@ namespace alps {
       typedef typename CdaggerOp::itime_type itime_t;
       typedef std::vector<CdaggerOp> cdagg_container_t; //one can use range() with multi_index_container.
       typedef std::vector<COp> c_container_t; //one can use range() with multi_index_container.
+      typedef std::map<itime_t,int> operator_map_t;
       //typedef boost::multi_index::multi_index_container<CdaggerOp> cdagg_container_t; //one can use range() with multi_index_container.
       //typedef boost::multi_index::multi_index_container<COp> c_container_t; //one can use range() with multi_index_container.
 
@@ -69,11 +70,34 @@ namespace alps {
       inline const c_container_t& get_c_ops() const { return c_ops_; }
 
       /**
+       * Return a reference to the inverse matrix. The rows and columns may not be time-ordered.
+       * The operators corresponding to the row and columns are given by get_cdagg_ops() and get_c_ops().
+       * Note that the rows of the inverse matrix corresponds to the CREATION operators.
+       */
+      const ResizableMatrix<Scalar>& get_inverse_matrix_time_unordered() const {return inv_matrix_;}
+
+      /**
        * Compute determinant. This may suffer from overflow
        */
       inline Scalar compute_determinant() const {
         return (1.*permutation_row_col_)/inv_matrix_.determinant();
       }
+
+      /**
+       * Try to remove some operators and add new operators
+       * This function actually remove and insert operators in cdagg_ops_, c_ops_ but does not update the matrix
+       */
+      Scalar try_add(
+        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      );
+
+      void perform_add(
+        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      );
+
+      void reject_add(
+        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      );
 
       /**
        * Try to remove some operators and add new operators
@@ -101,7 +125,13 @@ namespace alps {
       /**
        * Rebuild the matrix from scratch
        */
-      void rebuild();
+      void rebuild_inverse_matrix();
+
+      /**
+       * Compute the inverse matrix for the time-ordered set of operators
+       * This is only for debug.
+       */
+      eigen_matrix_t compute_inverse_matrix_time_ordered();
 
     private:
       //inverse matrix
@@ -117,7 +147,7 @@ namespace alps {
       const GreensFunction gf_;
 
       //key: the imaginary time of an operator, the index of row or col in the matrix
-      std::map<itime_t, int> row_pos_, col_pos_;
+      operator_map_t cop_pos_, cdagg_op_pos_;
 
       //work space and helper
       int perm_rat_;
@@ -126,10 +156,10 @@ namespace alps {
       ReplaceHelper<Scalar,eigen_matrix_t,eigen_matrix_t,eigen_matrix_t> replace_helper_;
 
       //swap cols of the matrix (and the rows of the inverse matrix)
-      void swap_cols(int col1, int col2);
+      void swap_cdagg_op(int col1, int col2);
 
       //swap rows of the matrix (and the cols of the inverse matrix)
-      void swap_rows(int row1, int row2);
+      void swap_c_op(int row1, int row2);
 
       int add_new_operators(
         typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator begin,
@@ -140,13 +170,13 @@ namespace alps {
       inline Scalar compute_g(int row, int col) const {return gf_(c_ops_[row], cdagg_ops_[col]); }
 
       inline int find_cdagg(const CdaggerOp& cdagg) const {
-        assert(col_pos_.find(operator_time(cdagg))!=col_pos_.end());
-        return col_pos_.at(operator_time(cdagg));
+        assert(cdagg_op_pos_.find(operator_time(cdagg))!=cdagg_op_pos_.end());
+        return cdagg_op_pos_.at(operator_time(cdagg));
       }
 
       inline int find_c(const COp& c) const {
-        assert(row_pos_.find(operator_time(c))!=row_pos_.end());
-        return row_pos_.at(operator_time(c));
+        assert(cop_pos_.find(operator_time(c))!=cop_pos_.end());
+        return cop_pos_.at(operator_time(c));
       }
 
       void sanity_check() const;
@@ -156,3 +186,4 @@ namespace alps {
 }
 
 #include "determinant_matrix.ipp"
+#include "detail/determinant_matrix_add.ipp"

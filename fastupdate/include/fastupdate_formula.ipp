@@ -47,10 +47,10 @@ namespace alps {
       assert(num_rows(D) == M && num_cols(D) == M);
 
       if (N == 0) {
-        return D.determinant();
+        return safe_determinant(D);
       } else {
         //compute H
-        return (D - C * invA.block() * B).determinant();
+        return safe_determinant(D - C * invA.block() * B);
       }
     }
 
@@ -74,15 +74,15 @@ namespace alps {
       assert(num_rows(D) == M && num_cols(D) == M);
 
       if (N == 0) {
-        invA = D.inverse();
-        return D.determinant();
+        invA = safe_inverse(D);
+        return safe_determinant(D);
       } else {
         //I don't know how expensive to allocate temporary objects C_invA, H, invA_B, F.
         //We could keep them as static objects or members of a class.
 
         //compute H
         const eigen_matrix_t C_invA = C * invA.block();
-        const eigen_matrix_t H = (D - C_invA * B).inverse();
+        const eigen_matrix_t H = safe_inverse(D - C_invA * B);
 
         //compute F
         const eigen_matrix_t invA_B = invA.block() * B;
@@ -99,7 +99,7 @@ namespace alps {
         invA.block(0, N, N, M) = F;
         invA.block(N, N, M, M) = H;
 
-        return 1. / H.determinant();
+        return 1. / safe_determinant(H);
       }
     }
   }
@@ -138,7 +138,7 @@ namespace alps {
         }
       }
 
-      return perm % 2 == 0 ? H.determinant() : -H.determinant();
+      return perm % 2 == 0 ? safe_determinant(H) : -safe_determinant(H);
     }
 
     template<class Scalar>
@@ -189,7 +189,7 @@ namespace alps {
         //(N,M)x(M,M)x(M,N)
         invG.block(0, 0, N, N).noalias() -=
           invG.block(0, N, N, M) *
-          invG.block(N, N, M, M).inverse() *
+          safe_inverse(invG.block(N, N, M, M)) *
           invG.block(N, 0, M, N);
       }
       invG.conservative_resize(N, N);
@@ -228,7 +228,7 @@ namespace alps {
                                                              const M1& R,
                                                              const M2& S) {
       if (N_ == 0) {
-        return S.determinant()*invG.determinant();
+        return safe_determinant(S)*invG.safe_determinant();
       }
 
       block_t tP_view (invG.block(0,  0,  N_,     N_     ));
@@ -238,13 +238,15 @@ namespace alps {
 
       //matrix M
       Mmat_ = tP_view;
-      Mmat_.noalias() -= tQ_view * tS_view.inverse() * tR_view; //(N, M_old) x (M_old, M_old) x (M_old, N)
+      if (M_old_ > 0) {
+        Mmat_.noalias() -= tQ_view * safe_inverse(tS_view) * tR_view; //(N, M_old) x (M_old, M_old) x (M_old, N)
+      }
 
       //(tS')^{-1}
       inv_tSp_ = S;
       inv_tSp_.noalias() -= R * (Mmat_ * Q).eval(); //(M,N)x(N,N)x(N,M)
 
-      return tS_view.determinant()*inv_tSp_.determinant();
+      return safe_determinant(tS_view)*safe_determinant(inv_tSp_);
     }
 
     template<typename Scalar, typename M0, typename M1, typename M2>
@@ -254,7 +256,9 @@ namespace alps {
                                                                 const M2& S) {
       if (N_ == 0) {
         invG.destructive_resize(M_, M_);
-        invG.block().noalias() = S.inverse();
+        if(M_ > 0) {
+          invG.block().noalias() = safe_inverse(S);
+        }
         return;
       }
 
@@ -264,20 +268,24 @@ namespace alps {
       block_t tRp_view(invG.block(N_, 0,  M_, N_));
       block_t tSp_view(invG.block(N_, N_, M_, M_));
 
-      //tSp
-      tSp_view.noalias() = inv_tSp_.inverse();
+      if (M_ > 0) {
+        //tSp
+        tSp_view.noalias() = safe_inverse(inv_tSp_);
 
-      //tQp
-      //(N,N)x(N,M)x(M,M) = (N,M)
-      tQp_view.noalias() = -Mmat_ * (Q * tSp_view).eval();
+        //tQp
+        //(N,N)x(N,M)x(M,M) = (N,M)
+        tQp_view.noalias() = -Mmat_ * (Q * tSp_view).eval();
 
-      //tRp
-      //(M,M)x(M,N)x(N,N)
-      tRp_view.noalias() = -(tSp_view * R).eval() * Mmat_;
+        //tRp
+        //(M,M)x(M,N)x(N,N)
+        tRp_view.noalias() = -(tSp_view * R).eval() * Mmat_;
+      }
 
       //tPp
       tPp_view = Mmat_;
-      tPp_view -= (Mmat_ * Q).eval() * tRp_view; //(N,N)x(N,M)x(M,N)
+      if (M_ > 0) {
+        tPp_view -= (Mmat_ * Q).eval() * tRp_view; //(N,N)x(N,M)x(M,N)
+      }
     }
   }
 }

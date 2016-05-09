@@ -6,6 +6,7 @@
 #pragma once
 
 #include "resizable_matrix.hpp"
+#include "util.hpp"
 
 namespace alps {
   namespace fastupdate {
