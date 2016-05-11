@@ -75,6 +75,15 @@ namespace alps {
       const ResizableMatrix<Scalar> &invG);
 
     /**
+     * Similar function but just try to remove the last operators.
+     */
+    template<class Scalar>
+    Scalar
+      compute_det_ratio_down(
+      const int num_rows_cols_removed,
+      const ResizableMatrix<Scalar> &invG);
+
+    /**
      * Update the inverse matrix for the removal of rows and cols
      * We implement equations in Appendix B.1.1 of Luitz's thesis.
      * https://opus.bibliothek.uni-wuerzburg.de/files/6408/thesis_luitz.pdf
@@ -97,6 +106,13 @@ namespace alps {
       const int num_rows_cols_removed,
       const std::vector<int> &rows_removed,
       const std::vector<int> &cols_removed,
+      ResizableMatrix<Scalar> &invG
+    );
+
+    template<class Scalar>
+    void
+      compute_inverse_matrix_down(
+      const int num_rows_cols_removed,
       ResizableMatrix<Scalar> &invG
     );
 

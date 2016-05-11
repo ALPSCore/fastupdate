@@ -11,6 +11,7 @@
 #include <boost/multi_index/identity.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/if.hpp>
+#include <boost/range/algorithm/adjacent_find.hpp>
 
 #include <Eigen/Dense>
 
@@ -19,6 +20,13 @@
 
 namespace alps {
   namespace fastupdate {
+
+    enum DeterminantMatrixState {
+      waiting = 0,
+      try_add_called = 1,
+      try_rem_called = 2,
+      try_rem_add_called = 3
+    };
 
     /**
      * CdaggerOp and COp must have the following functionalities
@@ -39,28 +47,24 @@ namespace alps {
       typedef std::vector<CdaggerOp> cdagg_container_t; //one can use range() with multi_index_container.
       typedef std::vector<COp> c_container_t; //one can use range() with multi_index_container.
       typedef std::map<itime_t,int> operator_map_t;
-      //typedef boost::multi_index::multi_index_container<CdaggerOp> cdagg_container_t; //one can use range() with multi_index_container.
-      //typedef boost::multi_index::multi_index_container<COp> c_container_t; //one can use range() with multi_index_container.
 
-      typedef typename cdagg_container_t::iterator cdgg_it;
+      typedef typename cdagg_container_t::iterator cdagg_it;
       typedef typename c_container_t::iterator c_it;
       BOOST_STATIC_ASSERT(boost::is_same<typename CdaggerOp::itime_type, typename COp::itime_type>::value);
 
       typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> eigen_matrix_t;
 
     public:
-      DeterminantMatrix(const GreensFunction& gf);
+      DeterminantMatrix(
+        const GreensFunction& gf
+      );
 
-      /*
-      template<typename CdaggIterator, typename CIterator>
+      template<typename CdaggCIterator>
       DeterminantMatrix(
         const GreensFunction& gf,
-        CdaggIterator cdagg_begin,
-        CdaggIterator cdagg_end,
-        CIterator c_begin,
-        CIterator c_end
+        CdaggCIterator first,
+        CdaggCIterator last
       );
-      */
 
       //size of matrix
       inline int size() const {return inv_matrix_.size1();}
@@ -85,42 +89,71 @@ namespace alps {
 
       /**
        * Try to remove some operators and add new operators
-       * This function actually remove and insert operators in cdagg_ops_, c_ops_ but does not update the matrix
+       * This function actually remove and insert operators in cdagg_ops_, c_ops_ but does not update the matrix.
+       * After calling try_add(), either of perform_add() or reject_add() must be called.
        */
+      template<typename CdaggCIterator>
       Scalar try_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+        CdaggCIterator cdagg_c_add_first,
+        CdaggCIterator cdagg_c_add_last
       );
 
-      void perform_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
-      );
+      void perform_add();
 
-      void reject_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
-      );
+      void reject_add();
 
       /**
        * Try to remove some operators and add new operators
        * This function actually remove and insert operators in cdagg_ops_, c_ops_ but does not update the matrix
        */
+      template<typename CdaggCIterator>
       Scalar try_remove_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_rem,
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+        CdaggCIterator cdagg_c_rem_first,
+        CdaggCIterator cdagg_c_rem_last,
+        CdaggCIterator cdagg_c_add_first,
+        CdaggCIterator cdagg_c_add_last
       );
 
       /**
        *  Remove some operators and add new operators
        *  This function actually update the matrix
        */
-      void perform_remove_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_rem,
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      void perform_remove_add();
+
+      template<typename CdaggCIterator>
+      void reject_remove_add(
+        CdaggCIterator cdagg_c_rem_first,
+        CdaggCIterator cdagg_c_rem_last,
+        CdaggCIterator cdagg_c_add_first,
+        CdaggCIterator cdagg_c_add_last
       );
 
-      void reject_remove_add(
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_rem,
-        const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      /**
+       * Try to remove some operators
+       * This function actually remove and insert operators in cdagg_ops_, c_ops_ but does not update the matrix
+       */
+      template<typename CdaggCIterator>
+      Scalar try_remove(
+        CdaggCIterator cdagg_c_rem_first,
+        CdaggCIterator cdagg_c_rem_last
       );
+
+      template<typename CdaggCIterator>
+      void perform_remove(
+        CdaggCIterator cdagg_c_rem_first,
+        CdaggCIterator cdagg_c_rem_last
+      );
+
+      template<typename CdaggCIterator>
+      void reject_remove(
+        CdaggCIterator cdagg_c_rem_first,
+        CdaggCIterator cdagg_c_rem_last
+      );
+
+      /**
+       * Rebuild the matrix from scratch
+       */
+      ResizableMatrix<Scalar> build_matrix();
 
       /**
        * Rebuild the matrix from scratch
@@ -134,6 +167,8 @@ namespace alps {
       eigen_matrix_t compute_inverse_matrix_time_ordered();
 
     private:
+      DeterminantMatrixState state_;
+
       //inverse matrix
       ResizableMatrix<Scalar> inv_matrix_;
 
@@ -155,19 +190,74 @@ namespace alps {
       eigen_matrix_t G_n_n_, G_n_j_, G_j_n_;
       ReplaceHelper<Scalar,eigen_matrix_t,eigen_matrix_t,eigen_matrix_t> replace_helper_;
 
-      //swap cols of the matrix (and the rows of the inverse matrix)
+      /*
+       * Private auxially functions
+       */
+    public:
+      inline void check_state(DeterminantMatrixState state) const {
+        if (state_ != state) {
+          throw std::logic_error("Error: the system is not in a correct state!");
+        }
+      }
+
+    private:
+
+      /** swap cols of the matrix (and the rows of the inverse matrix)*/
       void swap_cdagg_op(int col1, int col2);
 
-      //swap rows of the matrix (and the cols of the inverse matrix)
+      /** swap rows of the matrix (and the cols of the inverse matrix)*/
       void swap_c_op(int row1, int row2);
 
-      int add_new_operators(
-        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator begin,
-        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator end);
+      /** return if once can insert given operators. Note: duplicate members are not allowed in any configuration. */
+      template<typename CdaggCIterator>
+      bool insertion_possible(
+        CdaggCIterator first,
+        CdaggCIterator last
+      );
 
-      void remove_new_operators(const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add);
+      /** return if once can remove given operators, i.e, if they actually exist in the configuraiton */
+      template<typename CdaggCIterator>
+      bool removal_insertion_possible(
+        CdaggCIterator first_removal,
+        CdaggCIterator last_removal,
+        CdaggCIterator first_insertion,
+        CdaggCIterator last_insertion
+      );
+
+      /** return if once can remove given operators */
+      template<typename CdaggCIterator>
+      bool removal_possible(
+        CdaggCIterator first_removal,
+        CdaggCIterator last_removal
+      ) const;
+
+      /** add new operators and keeping the inverse matrix unchanged */
+      int add_new_operators(
+        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator first,
+        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator last);
+
+      /** add operators and keeping the inverse matrix unchanged */
+      int remove_last_operators(int num_operators_remove);
+
+      /** remove excess operators, which were inserted by add_new_operators() */
+      void remove_excess_operators();
 
       inline Scalar compute_g(int row, int col) const {return gf_(c_ops_[row], cdagg_ops_[col]); }
+
+      /** return if there is an operator at a given time */
+      inline bool exist(const CdaggerOp& cdagg) const {
+        return exist(operator_time(cdagg));
+      }
+
+      /** return if there is an operator at a given time */
+      inline bool exist(const COp& c) const {
+        return exist(operator_time(c));
+      }
+
+      /** return if there is an operator at a given time */
+      inline bool exist(itime_t time) const {
+        return cop_pos_.find(time)!=cop_pos_.end() || cdagg_op_pos_.find(time)!=cdagg_op_pos_.end();
+      }
 
       inline int find_cdagg(const CdaggerOp& cdagg) const {
         assert(cdagg_op_pos_.find(operator_time(cdagg))!=cdagg_op_pos_.end());
@@ -187,3 +277,5 @@ namespace alps {
 
 #include "determinant_matrix.ipp"
 #include "detail/determinant_matrix_add.ipp"
+#include "detail/determinant_matrix_remove.ipp"
+#include "detail/determinant_matrix_remove_add.ipp"

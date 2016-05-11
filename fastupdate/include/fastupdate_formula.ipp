@@ -142,6 +142,29 @@ namespace alps {
     }
 
     template<class Scalar>
+    Scalar
+    compute_det_ratio_down(
+      const int num_rows_cols_removed,
+      const ResizableMatrix <Scalar> &invG) {
+      typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
+
+      const int NpM = num_rows(invG);
+      const int M = num_rows_cols_removed;
+      const int N = NpM-M;
+      assert(num_cols(invG) == NpM);
+      assert(M > 0);
+
+      eigen_matrix_t H(M, M);
+      for (int j = 0; j < M; ++j) {
+        for (int i = 0; i < M; ++i) {
+          H(i, j) = invG(N+i, N+j);
+        }
+      }
+
+      return safe_determinant(H);
+    }
+
+    template<class Scalar>
     void
     compute_inverse_matrix_down(
       const int num_rows_cols_removed,
@@ -184,6 +207,41 @@ namespace alps {
       }
 
       //Step 2: update the inverse matrix and shrink it.
+      if (N > 0) {
+        //E -= F*H^{-1}*G
+        //(N,M)x(M,M)x(M,N)
+        invG.block(0, 0, N, N).noalias() -=
+          invG.block(0, N, N, M) *
+          safe_inverse(invG.block(N, N, M, M)) *
+          invG.block(N, 0, M, N);
+      }
+      invG.conservative_resize(N, N);
+    }
+
+    template<class Scalar>
+    void
+    compute_inverse_matrix_down(
+      const int num_rows_cols_removed,
+      ResizableMatrix <Scalar> &invG
+    ) {
+      typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
+
+      const int NpM = num_rows(invG);
+      const int M = num_rows_cols_removed;
+      const int N = NpM - M;
+      assert(num_cols(invG) == NpM);
+      assert(M > 0);
+      assert(NpM >= M);
+
+      if (NpM < M) {
+        throw std::logic_error("N should not be negative!");
+      }
+
+      if (M == 0) {
+        throw std::logic_error("M should be larger than 0!");
+      }
+
+      //update the inverse matrix and shrink it.
       if (N > 0) {
         //E -= F*H^{-1}*G
         //(N,M)x(M,M)x(M,N)

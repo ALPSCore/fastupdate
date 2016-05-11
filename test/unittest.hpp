@@ -111,8 +111,9 @@ struct OffDiagonalG0 {
     if (dt_tmp < 0) dt_tmp += beta_;
 
     if (c_op.flavor()==cdagg_op.flavor()) {
-      const double E_tmp = E_[c_op.flavor()];
-      return  -std::exp((beta_-dt_tmp)*E_tmp)/(1.0+std::exp(beta_*E_tmp));
+      const double value_at_half_beta = E_[c_op.flavor()];
+      const double a = (2-4*value_at_half_beta)/(beta_*beta_);
+      return 2*(value_at_half_beta + a*std::pow(dt_tmp-0.5*beta_, 2));
     } else {
       return (-dt+0.5*beta_)/(2*beta_)*phase_[c_op.flavor()][cdagg_op.flavor()];
     }

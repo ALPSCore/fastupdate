@@ -7,15 +7,25 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
+    template<typename CdaggCIterator>
     Scalar
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::try_add(
-      const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
+      CdaggCIterator cdagg_c_add_first,
+      CdaggCIterator cdagg_c_add_last
     ) {
-      const int nop_add = cdagg_c_add.size();
+      check_state(waiting);
+      state_ = try_add_called;
+
+      const int nop_add = std::distance(cdagg_c_add_first, cdagg_c_add_last);
       const int nop = inv_matrix_.size1();
 
+      //This should come after add_new_operators
+      if (!insertion_possible(cdagg_c_add_first, cdagg_c_add_last)) {
+        return 0.0;
+      }
+
       //Add new operators and compute new elements
-      perm_rat_ = add_new_operators(cdagg_c_add.begin(), cdagg_c_add.end());
+      perm_rat_ = add_new_operators(cdagg_c_add_first, cdagg_c_add_last);
 
       //compute the values of new elements
       G_n_n_.resize(nop_add, nop_add);
@@ -47,9 +57,9 @@ namespace alps {
       typename COp
     >
     void
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::perform_add(
-      const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
-    ) {
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::perform_add() {
+      check_state(try_add_called);
+      state_ = waiting;
       compute_inverse_matrix_up(G_j_n_, G_n_j_, G_n_n_, inv_matrix_);
       permutation_row_col_ *= perm_rat_;
     }
@@ -61,10 +71,10 @@ namespace alps {
       typename COp
     >
     void
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_add(
-      const std::vector<std::pair<CdaggerOp,COp> >& cdagg_c_add
-    ) {
-      remove_new_operators(cdagg_c_add);
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_add() {
+      check_state(try_add_called);
+      state_ = waiting;
+      remove_excess_operators();
     }
 
   }

@@ -268,7 +268,7 @@ TEST(DeterminantMatrix, AddRowsCols) {
   typedef std::complex<double> Scalar;
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
 
-  const int n_flavors = 3;
+  const int n_flavors = 1;
   const double beta = 1.0;
   typedef DeterminantMatrix<
     Scalar,
@@ -285,7 +285,7 @@ TEST(DeterminantMatrix, AddRowsCols) {
   boost::multi_array<Scalar,2> phase(boost::extents[n_flavors][n_flavors]);
 
   for (int i=0; i<n_flavors; ++i) {
-    E[i] = 10*(double) (i+0.5);
+    E[i] = 0.001;
   }
   for (int i=0; i<n_flavors; ++i) {
     for (int j=i; j<n_flavors; ++j) {
@@ -296,27 +296,37 @@ TEST(DeterminantMatrix, AddRowsCols) {
     }
   }
 
-  determinant_matrix_t det_mat(OffDiagonalG0<Scalar>(beta, n_flavors, E, phase));
+  OffDiagonalG0<Scalar> gf(beta, n_flavors, E, phase);
+  determinant_matrix_t det_mat(gf);
 
   std::vector<std::pair<creator,annihilator> > init_ops;
   for (int i=0; i<4; ++i) {
+    const int f1 = n_flavors*unidist(gen);
+    const int f2 = n_flavors*unidist(gen);
+    const double t1 = unidist(gen)*beta;
+    const double t2 = unidist(gen)*beta;
+    //std::cout << "t1, t2 = " << t1 << " " << t2 << " " <<
+    //gf(
+      //annihilator(f1, t2),
+      //creator(f2, t1)
+    //) << std::endl;
     init_ops.push_back(
       std::make_pair(
-        creator(n_flavors*unidist(gen), unidist(gen)*beta),
-        annihilator(n_flavors*unidist(gen), unidist(gen)*beta)
+        creator(f1, t1),
+        annihilator(f2, t2)
       )
     );
   }
 
   const Scalar det_rat = det_mat.try_add(
-    init_ops
+    init_ops.begin(), init_ops.end()
   );
 
-  det_mat.perform_add(
-    init_ops
-  );
+  det_mat.perform_add();
 
   const Scalar det_init = det_mat.compute_determinant();
+  //std::cout << det_mat.build_matrix() << std::endl;
+  //std::cout << det_init << " " << det_rat << std::endl;
   ASSERT_TRUE(std::abs(det_init-det_rat)/std::abs(det_rat)<1E-8);
 
   //check inverse matrix
@@ -326,7 +336,7 @@ TEST(DeterminantMatrix, AddRowsCols) {
   ASSERT_TRUE((inv_mat_init-inv_mat_init_rebuild).squaredNorm()/inv_mat_init.squaredNorm()<1E-8);
 
   /*
-   * Now we remove some operators and add some operators
+   * Now we add more operators
    */
   std::vector<std::pair<creator,annihilator> > ops_add;
   for (int i=0; i<4; ++i) {
@@ -339,33 +349,41 @@ TEST(DeterminantMatrix, AddRowsCols) {
   }
 
   const Scalar det_rat2 = det_mat.try_add(
-    ops_add
+    ops_add.begin(), ops_add.end()
   );
 
-  det_mat.perform_add(
-    ops_add
-  );
+  det_mat.perform_add();
 
   const Scalar det2 = det_mat.compute_determinant();
-  std::cout << "det_rat " << det2/det_init << " " << det_rat2 << std::endl;
+  //std::cout << "det_rat " << det2/det_init << " " << det_rat2 << std::endl;
 
   //check inverse matrix
   eigen_matrix_t inv_mat_fu = det_mat.compute_inverse_matrix_time_ordered();
   det_mat.rebuild_inverse_matrix();
   eigen_matrix_t inv_mat_rebuild = det_mat.compute_inverse_matrix_time_ordered();
-  std::cout << "inv " << inv_mat_fu << std::endl;
-  std::cout << "inv " << inv_mat_rebuild << std::endl;
+  //std::cout << "inv " << inv_mat_fu << std::endl;
+  //std::cout << "inv " << inv_mat_rebuild << std::endl;
+  ASSERT_TRUE((inv_mat_fu-inv_mat_rebuild).squaredNorm()/inv_mat_rebuild.squaredNorm()<1E-8);
+  ASSERT_TRUE(std::abs(det2/det_init-det_rat2)/std::abs(det_rat2)<1E-8);
+
+  /*
+   * Try to add the same operators, which should be rejected.
+   */
+  ASSERT_TRUE(det_mat.try_add(ops_add.begin(), ops_add.end())==0.0);
+  det_mat.reject_add();
+
+  det_mat.rebuild_inverse_matrix();
+  inv_mat_rebuild = det_mat.compute_inverse_matrix_time_ordered();
   ASSERT_TRUE((inv_mat_fu-inv_mat_rebuild).squaredNorm()/inv_mat_rebuild.squaredNorm()<1E-8);
   ASSERT_TRUE(std::abs(det2/det_init-det_rat2)/std::abs(det_rat2)<1E-8);
 }
 
-/*
-TEST(FastUpdate, DeterminantMatrix) {
+TEST(DeterminantMatrix, RemoveAddRowsCols) {
   using namespace alps::fastupdate;
   typedef std::complex<double> Scalar;
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
 
-  const int n_flavors = 3;
+  const int n_flavors = 1;
   const double beta = 1.0;
   typedef DeterminantMatrix<
     Scalar,
@@ -382,41 +400,42 @@ TEST(FastUpdate, DeterminantMatrix) {
   boost::multi_array<Scalar,2> phase(boost::extents[n_flavors][n_flavors]);
 
   for (int i=0; i<n_flavors; ++i) {
-    E[i] = 10*(double) (i+0.5);
+    E[i] = 0.001;
   }
   for (int i=0; i<n_flavors; ++i) {
     for (int j=i; j<n_flavors; ++j) {
-      //phase[i][j] = std::exp(std::complex<double>(0.0, 1.*i*(2*j+1.0)));
-      //phase[j][i] = std::conj(phase[i][j]);
-      phase[i][j] = 1.0;
+      //phase[i][j] = 1.0;
+      phase[i][j] = std::exp(std::complex<double>(0.0, 1.*i*(2*j+1.0)));
       phase[j][i] = std::conj(phase[i][j]);
     }
   }
 
-  determinant_matrix_t det_mat(OffDiagonalG0<Scalar>(beta, n_flavors, E, phase));
+  OffDiagonalG0<Scalar> gf(beta, n_flavors, E, phase);
+  determinant_matrix_t det_mat(gf);
 
   std::vector<std::pair<creator,annihilator> > init_ops;
   for (int i=0; i<2; ++i) {
+    const int f1 = n_flavors*unidist(gen);
+    const int f2 = n_flavors*unidist(gen);
+    const double t1 = unidist(gen)*beta;
+    const double t2 = unidist(gen)*beta;
     init_ops.push_back(
       std::make_pair(
-        creator(n_flavors*unidist(gen), unidist(gen)*beta),
-        annihilator(n_flavors*unidist(gen), unidist(gen)*beta)
+        creator(f1, t1),
+        annihilator(f2, t2)
       )
     );
   }
 
   const Scalar det_rat = det_mat.try_add(
-    //std::vector<std::pair<creator,annihilator> >(),
-    init_ops
+    init_ops.begin(), init_ops.end()
   );
 
-  det_mat.perform_add(
-    //std::vector<std::pair<creator,annihilator> >(),
-    init_ops
-  );
+  det_mat.perform_add();
 
   const Scalar det_init = det_mat.compute_determinant();
-  //std::cout << "det " << det_init << " " << det_rat << std::endl;
+  //std::cout << det_mat.build_matrix() << std::endl;
+  //std::cout << det_init << " " << det_rat << std::endl;
   ASSERT_TRUE(std::abs(det_init-det_rat)/std::abs(det_rat)<1E-8);
 
   //check inverse matrix
@@ -425,46 +444,132 @@ TEST(FastUpdate, DeterminantMatrix) {
   eigen_matrix_t inv_mat_init_rebuild = det_mat.compute_inverse_matrix_time_ordered();
   ASSERT_TRUE((inv_mat_init-inv_mat_init_rebuild).squaredNorm()/inv_mat_init.squaredNorm()<1E-8);
 
+  /*
+   * Now we remove all the operators and add other operators
+   */
+  std::vector<std::pair<creator,annihilator> > ops_rem(init_ops);
+  std::random_shuffle(ops_rem.begin(), ops_rem.end(), rs);
+  ops_rem.resize(init_ops.size()-1);
+
   std::vector<std::pair<creator,annihilator> > ops_add;
-  for (int i=0; i<2; ++i) {
+  for (int i=0; i<3; ++i) {
+    const int f1 = n_flavors*unidist(gen);
+    const int f2 = n_flavors*unidist(gen);
+    const double t1 = unidist(gen)*beta;
+    const double t2 = unidist(gen)*beta;
     ops_add.push_back(
       std::make_pair(
-        creator(n_flavors*unidist(gen), unidist(gen)*beta),
-        annihilator(n_flavors*unidist(gen), unidist(gen)*beta)
+        creator(f1, t1),
+        annihilator(f2, t2)
       )
     );
   }
 
-  //std::vector<std::pair<creator,annihilator> > ops_rem(init_ops);
-  //std::random_shuffle(ops_rem.begin(), ops_rem.end(), rs);
-  //ops_rem.resize(init_ops.size()/2);
-  //ops_rem.resize(0);
-
-  const Scalar det_rat2 = det_mat.try_add(
-    ops_add
+  det_mat.check_state(waiting);
+  const Scalar det_rat2 = det_mat.try_remove_add(
+    ops_rem.begin(),
+    ops_rem.end(),
+    ops_add.begin(),
+    ops_add.end()
   );
 
-  det_mat.perform_add(
-    ops_add
-  );
+  det_mat.perform_remove_add();
 
   const Scalar det2 = det_mat.compute_determinant();
-  //std::cout << det2 << " " << det_init << " " << det_rat2 << std::endl;
-  std::cout << "det_rat " << det2/det_init << " " << det_rat2 << std::endl;
 
   //check inverse matrix
   eigen_matrix_t inv_mat_fu = det_mat.compute_inverse_matrix_time_ordered();
   det_mat.rebuild_inverse_matrix();
-  eigen_matrix_t inv_mat_rebuild = det_mat.compute_inverse_matrix_time_ordered();
-  std::cout << "inv " << inv_mat_fu << std::endl;
-  std::cout << "inv " << inv_mat_rebuild << std::endl;
-  ASSERT_TRUE((inv_mat_fu-inv_mat_rebuild).squaredNorm()/inv_mat_rebuild.squaredNorm()<1E-8);
-
+  eigen_matrix_t inv_mat2 = det_mat.compute_inverse_matrix_time_ordered();
+  const Scalar det2_rebuild = det_mat.compute_determinant();
+  ASSERT_TRUE((inv_mat_fu-inv_mat2).squaredNorm()/inv_mat2.squaredNorm()<1E-8);
   ASSERT_TRUE(std::abs(det2/det_init-det_rat2)/std::abs(det_rat2)<1E-8);
-  //std::vector<std::pair<creator,annihilator> > ops_rem;
-  //ops_rem.push_back(
-  //std::make_pair(creator(0, 0.1*beta), annihilator(0, 0.2*beta))
-  //);
 
+  /*
+   * Try to add the same operators, which should be rejected.
+   */
+  ASSERT_TRUE(det_mat.try_add(ops_add.begin(), ops_add.end())==0.0);
+  det_mat.reject_add();
+  ASSERT_TRUE((det_mat.compute_inverse_matrix_time_ordered()-inv_mat2).squaredNorm()/inv_mat2.squaredNorm()<1E-8);
 }
-*/
+
+TEST(DeterminantMatrix, RemoveRowsCols) {
+  using namespace alps::fastupdate;
+  typedef std::complex<double> Scalar;
+  typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
+
+  const int n_flavors = 1;
+  const double beta = 1.0;
+  typedef DeterminantMatrix<
+    Scalar,
+    OffDiagonalG0<Scalar>,
+    creator,
+    annihilator
+  > determinant_matrix_t;
+  const int seed = 122;
+  boost::mt19937 gen(seed);
+  boost::uniform_01<> unidist;
+  rs_shuffle rs(gen);
+
+  std::vector<double> E(n_flavors);
+  boost::multi_array<Scalar,2> phase(boost::extents[n_flavors][n_flavors]);
+
+  for (int i=0; i<n_flavors; ++i) {
+    E[i] = 0.001;
+  }
+  for (int i=0; i<n_flavors; ++i) {
+    for (int j=i; j<n_flavors; ++j) {
+      phase[i][j] = std::exp(std::complex<double>(0.0, 1.*i*(2*j+1.0)));
+      phase[j][i] = std::conj(phase[i][j]);
+    }
+  }
+
+
+  std::vector<std::pair<creator,annihilator> > init_ops;
+  for (int i=0; i<4; ++i) {
+    const int f1 = n_flavors*unidist(gen);
+    const int f2 = n_flavors*unidist(gen);
+    const double t1 = unidist(gen)*beta;
+    const double t2 = unidist(gen)*beta;
+    init_ops.push_back(
+      std::make_pair(
+        creator(f1, t1),
+        annihilator(f2, t2)
+      )
+    );
+  }
+
+  OffDiagonalG0<Scalar> gf(beta, n_flavors, E, phase);
+  determinant_matrix_t det_mat(gf, init_ops.begin(), init_ops.end());
+
+  const Scalar det_init = det_mat.compute_determinant();
+  std::cout << "det_init " << det_init << std::endl;
+
+  /*
+   * Now we remove some operators
+   */
+  std::vector<std::pair<creator,annihilator> > ops_rem(init_ops);
+  std::random_shuffle(ops_rem.begin(), ops_rem.end(), rs);
+  ops_rem.resize(init_ops.size()-2);
+
+  det_mat.check_state(waiting);
+  const Scalar det_rat2 = det_mat.try_remove(
+    ops_rem.begin(),
+    ops_rem.end()
+  );
+
+  det_mat.perform_remove(
+    ops_rem.begin(),
+    ops_rem.end()
+  );
+
+  const Scalar det2 = det_mat.compute_determinant();
+
+  //check inverse matrix
+  eigen_matrix_t inv_mat_fu = det_mat.compute_inverse_matrix_time_ordered();
+  det_mat.rebuild_inverse_matrix();
+  eigen_matrix_t inv_mat2 = det_mat.compute_inverse_matrix_time_ordered();
+  const Scalar det2_rebuild = det_mat.compute_determinant();
+  ASSERT_TRUE((inv_mat_fu-inv_mat2).squaredNorm()/inv_mat2.squaredNorm()<1E-8);
+  ASSERT_TRUE(std::abs(det2/det_init-det_rat2)/std::abs(det_rat2)<1E-8);
+}
