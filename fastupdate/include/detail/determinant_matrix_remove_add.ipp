@@ -1,3 +1,5 @@
+#include "../determinant_matrix.hpp"
+
 namespace alps {
   namespace fastupdate {
 
@@ -45,6 +47,18 @@ namespace alps {
         for (int swap=0; swap<nop_rem; ++swap) {
           swap_cdagg_op(rem_cols_[nop_rem-1-swap], nop-1-swap);
           swap_c_op(rem_rows_[nop_rem-1-swap], nop-1-swap);
+        }
+
+        //remember what operators are removed
+        removed_op_pairs_.resize(0);
+        removed_op_pairs_.reserve(nop_rem);
+        for (int iop=0; iop<nop_rem; ++iop) {
+          removed_op_pairs_.push_back(
+            std::make_pair(
+              cdagg_ops_[nop-1-iop],
+              c_ops_[nop-1-iop]
+            )
+          );
         }
       }
 
@@ -114,7 +128,8 @@ namespace alps {
       remove_last_operators(std::distance(cdagg_c_add_first, cdagg_c_add_last));
 
       //then insert the removed operators back
-      add_new_operators(cdagg_c_rem_first, cdagg_c_rem_last);
+      add_new_operators(removed_op_pairs_.rbegin(), removed_op_pairs_.rend());
+
       sanity_check();
     }
   }

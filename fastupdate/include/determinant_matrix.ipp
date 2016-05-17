@@ -219,15 +219,18 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
+    template<
+      typename Iterator
+    >
     int
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::add_new_operators(
-      typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator first,
-      typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator last
+      Iterator first,
+      Iterator last
     ) {
       std::pair<typename std::map<itime_t,int>::iterator,bool> ret;
       itime_t time_new;
       int perm_diff = 0;
-      for (typename std::vector<std::pair<CdaggerOp,COp> >::const_iterator it=first; it!=last; ++it) {
+      for (Iterator it=first; it!=last; ++it) {
         const int pos = cdagg_ops_.size();
 
         cdagg_ops_.push_back(it->first);
@@ -316,6 +319,8 @@ namespace alps {
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::sanity_check() const {
 #ifndef NDEBUG
       check_state(waiting);
+
+      //print_operators();
 
       const int num_ops = cdagg_ops_.size();
       const int mat_rank = inv_matrix_.size1();
@@ -416,6 +421,21 @@ namespace alps {
       }
 
       return inv_mat_ordered;
+    }
+
+    template<
+      typename Scalar,
+      typename GreensFunction,
+      typename CdaggerOp,
+      typename COp
+    >
+    void
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::print_operators() const {
+      const int N = size();
+
+      for (int iop=0; iop<cdagg_ops_.size(); ++iop) {
+        std::cout << "operator at row/col " << iop << " " << operator_time(c_ops_[iop]) << " " << operator_time(cdagg_ops_[iop]) << std::endl;
+      }
     }
 
   }

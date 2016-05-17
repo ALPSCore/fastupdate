@@ -166,6 +166,8 @@ namespace alps {
        */
       eigen_matrix_t compute_inverse_matrix_time_ordered();
 
+      void print_operators() const;
+
     private:
       DeterminantMatrixState state_;
 
@@ -187,6 +189,8 @@ namespace alps {
       //work space and helper
       int perm_rat_;
       std::vector<int> rem_cols_, rem_rows_;
+      std::vector<std::pair<CdaggerOp,COp> > removed_op_pairs_;
+      //std::vector<COp> removed_c_ops_;
       eigen_matrix_t G_n_n_, G_n_j_, G_j_n_;
       ReplaceHelper<Scalar,eigen_matrix_t,eigen_matrix_t,eigen_matrix_t> replace_helper_;
 
@@ -232,9 +236,8 @@ namespace alps {
       ) const;
 
       /** add new operators and keeping the inverse matrix unchanged */
-      int add_new_operators(
-        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator first,
-        typename std::vector<std::pair<CdaggerOp, COp> >::const_iterator last);
+      template<typename Iterator>
+      int add_new_operators(Iterator first,Iterator last);
 
       /** add operators and keeping the inverse matrix unchanged */
       int remove_last_operators(int num_operators_remove);
