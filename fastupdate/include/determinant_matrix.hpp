@@ -138,17 +138,9 @@ namespace alps {
         CdaggCIterator cdagg_c_rem_last
       );
 
-      template<typename CdaggCIterator>
-      void perform_remove(
-        CdaggCIterator cdagg_c_rem_first,
-        CdaggCIterator cdagg_c_rem_last
-      );
+      void perform_remove();
 
-      template<typename CdaggCIterator>
-      void reject_remove(
-        CdaggCIterator cdagg_c_rem_first,
-        CdaggCIterator cdagg_c_rem_last
-      );
+      void reject_remove();
 
       /**
        * Rebuild the matrix from scratch

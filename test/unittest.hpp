@@ -49,7 +49,7 @@ public:
   }
 
 private:
-  boost::random::mt19937 gen_;
+  boost::random::mt19937& gen_;
 };
 
 /*creation operator class*/

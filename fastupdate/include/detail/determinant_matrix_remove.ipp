@@ -40,6 +40,18 @@ namespace alps {
         swap_c_op(rem_rows_[nop_rem-1-swap], nop-1-swap);
       }
 
+      //remember what operators are removed
+      removed_op_pairs_.resize(0);
+      removed_op_pairs_.reserve(nop_rem);
+      for (int iop=0; iop<nop_rem; ++iop) {
+        removed_op_pairs_.push_back(
+          std::make_pair(
+            cdagg_ops_[nop-1-iop],
+            c_ops_[nop-1-iop]
+          )
+        );
+      }
+
       //Remove the last operators and add new operators
       perm_rat_ = remove_last_operators(nop_rem);
 
@@ -52,16 +64,12 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    template<typename CdaggCIterator>
     void
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::perform_remove(
-      CdaggCIterator cdagg_c_rem_first,
-      CdaggCIterator cdagg_c_rem_last
-    ) {
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::perform_remove() {
       check_state(try_rem_called);
       state_ = waiting;
 
-      const int nop_rem = std::distance(cdagg_c_rem_first, cdagg_c_rem_last);
+      const int nop_rem = removed_op_pairs_.size();
       permutation_row_col_ *= perm_rat_;
       compute_inverse_matrix_down(nop_rem, inv_matrix_);
     }
@@ -72,16 +80,13 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    template<typename CdaggCIterator>
     void
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_remove(
-      CdaggCIterator cdagg_c_rem_first,
-      CdaggCIterator cdagg_c_rem_last
-    ) {
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_remove() {
       check_state(try_rem_called);
       state_ = waiting;
 
-      add_new_operators(cdagg_c_rem_first, cdagg_c_rem_last);
+      //insert the removed operators back
+      add_new_operators(removed_op_pairs_.rbegin(), removed_op_pairs_.rend());
     }
 
   }
