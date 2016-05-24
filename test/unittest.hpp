@@ -11,8 +11,8 @@
 
 #include "gtest.h"
 
-#include "determinant_matrix.hpp"
-#include "fastupdate_formula.hpp"
+#include <alps/determinant_matrix.hpp>
+#include <alps/fastupdate_formula.hpp>
 #include "util.hpp"
 
 template<typename Derived>
