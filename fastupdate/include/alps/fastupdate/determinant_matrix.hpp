@@ -144,7 +144,10 @@ namespace alps {
 
       void reject_remove();
 
-      Scalar try_replace_cdagg(const CdaggerOp & cdagg);
+      Scalar try_replace_cdagg(
+              const CdaggerOp & old_cdagg,
+              const CdaggerOp & new_cdagg
+      );
       Scalar perform_replace_cdagg();
       Scalar reject_replace_cdagg();
 
