@@ -75,7 +75,6 @@ TEST(FastUpdate, BlockMatrixDown)
 {
   using namespace alps::fastupdate;
   typedef double Scalar;
-  //typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> matrix_t;
 
   std::vector<int> N_list, M_list;
   N_list.push_back(10);
@@ -126,69 +125,81 @@ TEST(FastUpdate, BlockMatrixDown)
   }
 }
 
-/*
-TEST(FastUpdate, BlockMatrixReplaceRowsCols) {
-    std::vector<size_t> N_list, M_list;
-    N_list.push_back(10);
-    M_list.push_back(4);
+TEST(FastUpdate, ReplaceLastRow)
+{
+  using namespace alps::fastupdate;
+  typedef std::complex<double> Scalar;
 
-    N_list.push_back(100);
-    M_list.push_back(50);
+  std::vector<int> N_list;
+  N_list.push_back(10);
+  N_list.push_back(21);
 
-    N_list.push_back(100);
-    M_list.push_back(49);
+  for (int n=0; n<N_list.size(); ++n) {
+    const int N = N_list[n];
 
-    for (int n = 0; n < N_list.size(); ++n) {
-        for (int m = 0; m < M_list.size(); ++m) {
-            const int N = N_list[n];
-            const int M = M_list[m];
+    ResizableMatrix<Scalar> G(N, N, 0.0), invG(N, N, 0.0);//G, G^{-1}
+    ResizableMatrix<Scalar> Gprime(N, N, 0.0);//G'
+    Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> new_row(1, N);
 
-            typedef alps::numeric::matrix<double> matrix_t;
+    randomize_matrix(G, 100);//100 is a seed
+    invG = inverse(G);
 
-            matrix_t BigMatrix(N + M, N + M, 0), invBigMatrix(N + M, N + M, 0);
-            std::vector<std::pair<int, int> > swap_list;
-
-            randomize_matrix(BigMatrix, 100);//100 is a seed
-            invBigMatrix = inverse(BigMatrix);
-
-            //which rows and cols are to be replaced
-            std::vector<int> rows_replaced(N + M);
-            for (int i = 0; i < N + M; ++i) {
-                rows_replaced[i] = i;
-            }
-            std::random_shuffle(rows_replaced.begin(), rows_replaced.end());
-            rows_replaced.resize(M);
-            std::sort(rows_replaced.begin(), rows_replaced.end());
-
-            swap_list.resize(M);
-            for (int i=0; i<M; ++i) {
-                swap_list[i] = std::pair<int,int>(rows_replaced[M-1-i], N+M-1-i);
-            }
-
-            matrix_t R(M, N), S(M, M), Q(N, M);
-            randomize_matrix(R, 110);//100 is a seed
-            randomize_matrix(S, 210);//100 is a seed
-            randomize_matrix(Q, 310);//100 is a seed
-
-            matrix_t BigMatrixReplaced(BigMatrix);
-            replace_rows_cols(BigMatrixReplaced, Q, R, S, rows_replaced);
-
-            //testing compute_det_ratio_down
-            double det_rat = alps::numeric::determinant(BigMatrixReplaced)/determinant(BigMatrix);
-
-            matrix_t invBigMatrix_fast(invBigMatrix), Mmat, inv_tSp, tPp, tQp, tRp, tSp;
-            swap_cols_rows(invBigMatrix_fast, swap_list.begin(), swap_list.end());
-            double det_rat_fast = compute_det_ratio_replace_rows_cols(invBigMatrix_fast, Q, R, S, Mmat, inv_tSp);
-            //compute_inverse_matrix_replace_rows_cols(invBigMatrix_fast, Q, R, S, Mmat, inv_tSp, tPp, tQp, tRp, tSp);
-            compute_inverse_matrix_replace_rows_cols(invBigMatrix_fast, Q, R, S, Mmat, inv_tSp);
-            swap_cols_rows(invBigMatrix_fast, swap_list.rbegin(), swap_list.rend());
-            ASSERT_TRUE(std::abs(det_rat-det_rat_fast)<1E-8);
-            ASSERT_TRUE(alps::numeric::norm_square(inverse(BigMatrixReplaced)-invBigMatrix_fast)<1E-8);
-        }
+    randomize_matrix(new_row, 101);//100 is a seed
+    Gprime = G;
+    for (int j=0; j<N; ++j) {
+      Gprime(N-1, j) = new_row(0, j);
     }
-}
-*/
 
+    Scalar det_rat = compute_det_ratio_relace_last_row(invG, new_row);
+    ASSERT_TRUE(std::abs(det_rat-Gprime.determinant()/G.determinant())<1E-8) << "N=" << N;
+
+    //update G^{-1} to G'^{-1}
+    ResizableMatrix<Scalar> invGprime_fastupdate(invG);
+    compute_inverse_matrix_replace_last_row(invG, new_row, det_rat);
+
+    ResizableMatrix<Scalar> invGprime = G;
+    invGprime.invert();
+    ASSERT_TRUE(norm_square(invGprime-invGprime_fastupdate)<1E-8) << "N=" << N;
+  }
+}
+
+TEST(FastUpdate, ReplaceLastCol)
+{
+  using namespace alps::fastupdate;
+  typedef std::complex<double> Scalar;
+
+  std::vector<int> N_list;
+  N_list.push_back(10);
+  N_list.push_back(21);
+
+  for (int n=0; n<N_list.size(); ++n) {
+    const int N = N_list[n];
+
+    ResizableMatrix<Scalar> G(N, N, 0.0), invG(N, N, 0.0);//G, G^{-1}
+    ResizableMatrix<Scalar> Gprime(N, N, 0.0);//G'
+    Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> new_col(N, 1);
+
+    randomize_matrix(G, 100);//100 is a seed
+    invG = inverse(G);
+
+    randomize_matrix(new_col, 101);//100 is a seed
+    Gprime = G;
+    for (int j=0; j<N; ++j) {
+      Gprime(j, N-1) = new_col(j, 0);
+    }
+
+    Scalar det_rat = compute_det_ratio_relace_last_col(invG, new_col);
+    ASSERT_TRUE(std::abs(det_rat-Gprime.determinant()/G.determinant())<1E-8) << "N=" << N;
+
+    //update G^{-1} to G'^{-1}
+    ResizableMatrix<Scalar> invGprime_fastupdate(invG);
+    compute_inverse_matrix_replace_last_col(invG, new_col, det_rat);
+
+    ResizableMatrix<Scalar> invGprime = G;
+    invGprime.invert();
+    ASSERT_TRUE(norm_square(invGprime-invGprime_fastupdate)<1E-8) << "N=" << N;
+  }
+}
 
 TEST(FastUpdate, BlockMatrixReplaceLastRowsColsWithDifferentSizes) {
   using namespace alps::fastupdate;
