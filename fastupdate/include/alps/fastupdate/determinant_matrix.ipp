@@ -1,3 +1,5 @@
+#include "determinant_matrix.hpp"
+
 namespace alps {
   namespace fastupdate {
 

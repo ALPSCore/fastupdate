@@ -25,7 +25,9 @@ namespace alps {
       waiting = 0,
       try_add_called = 1,
       try_rem_called = 2,
-      try_rem_add_called = 3
+      try_rem_add_called = 3,
+      try_replace_cdagg__called = 4,
+      try_replace_c__called = 5
     };
 
     /**
@@ -142,6 +144,11 @@ namespace alps {
 
       void reject_remove();
 
+      Scalar try_replace_cdagg(const CdaggerOp & cdagg);
+      Scalar perform_replace_cdagg();
+      Scalar reject_replace_cdagg();
+
+
       /**
        * Rebuild the matrix from scratch
        */
@@ -180,6 +187,9 @@ namespace alps {
 
       //work space and helper
       int perm_rat_;
+      Scalar det_rat_;
+      CdaggerOp new_cdagg_, old_cdagg_;
+      COp new_c_, old_c_;
       std::vector<int> rem_cols_, rem_rows_;
       std::vector<std::pair<CdaggerOp,COp> > removed_op_pairs_;
       //std::vector<COp> removed_c_ops_;
