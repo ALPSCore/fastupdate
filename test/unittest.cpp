@@ -764,3 +764,115 @@ TEST(DeterminantMatrix, SeparatedUpdateRemoveRowsCols) {
     ASSERT_TRUE((inv_mat-inv_mat_rebuilt).squaredNorm()/inv_mat_rebuilt.squaredNorm() < 1E-8);
   }
 }
+
+TEST(DeterminantMatrix, ReplaceRowCol) {
+  using namespace alps::fastupdate;
+  typedef std::complex<double> Scalar;
+  typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> eigen_matrix_t;
+
+  const int n_flavors = 1;
+  const double beta = 1.0;
+  const int pert_order = 8;
+
+  typedef DeterminantMatrix<
+    Scalar,
+    OffDiagonalG0<Scalar>,
+    creator,
+    annihilator
+  > determinant_matrix_t;
+  const int seed = 123;
+  boost::mt19937 gen(seed);
+  boost::uniform_01<> unidist;
+  rs_shuffle rs(gen);
+
+  std::vector<double> E(n_flavors);
+  boost::multi_array<Scalar,2> phase(boost::extents[n_flavors][n_flavors]);
+
+  for (int i=0; i<n_flavors; ++i) {
+    E[i] = 0.001;
+  }
+  for (int i=0; i<n_flavors; ++i) {
+    for (int j=i; j<n_flavors; ++j) {
+      phase[i][j] = std::exp(std::complex<double>(0.0, 1.*i*(2*j+1.0)));
+      phase[j][i] = std::conj(phase[i][j]);
+    }
+  }
+
+  std::vector<std::pair<creator,annihilator> > init_ops;
+  for (int i=0; i<pert_order; ++i) {
+    const int f1 = n_flavors*unidist(gen);
+    const int f2 = n_flavors*unidist(gen);
+    const double t1 = unidist(gen)*beta;
+    const double t2 = unidist(gen)*beta;
+    init_ops.push_back(
+      std::make_pair(
+        creator(f1, t1),
+        annihilator(f2, t2)
+      )
+    );
+  }
+
+  OffDiagonalG0<Scalar> gf(beta, n_flavors, E, phase);
+  determinant_matrix_t det_mat(gf, init_ops.begin(), init_ops.end());
+
+  const Scalar det_init = det_mat.compute_determinant();
+
+  /*
+   * Now we place cdagger
+   */
+  for (int itest=0; itest<100; ++itest) {
+    const Scalar det_old = det_mat.compute_determinant();
+
+    std::vector<creator> cdagg_ops = det_mat.get_cdagg_ops();
+    std::random_shuffle(cdagg_ops.begin(), cdagg_ops.end(), rs);
+    cdagg_ops.resize(1);
+    creator new_cdagg(n_flavors*unidist(gen), unidist(gen)*beta);
+    const Scalar det_rat_fast_update = det_mat.try_replace_cdagg(cdagg_ops[0], new_cdagg);
+
+    const bool singular =  std::abs(det_rat_fast_update) < 1E-5 || std::abs(det_rat_fast_update) > 1E+5;
+
+    if (std::abs(det_rat_fast_update) > unidist(gen) && !singular) {
+      det_mat.perform_replace_cdagg();
+      const Scalar det_new = det_mat.compute_determinant();
+      ASSERT_TRUE(std::abs(det_new/det_old-det_rat_fast_update) / std::abs(det_rat_fast_update) < 1E-8);
+    } else {
+      det_mat.reject_replace_cdagg();
+    }
+
+    //check inverse matrix
+    eigen_matrix_t inv_mat = det_mat.compute_inverse_matrix_time_ordered();
+    det_mat.rebuild_inverse_matrix();
+    eigen_matrix_t inv_mat_rebuilt = det_mat.compute_inverse_matrix_time_ordered();
+    ASSERT_TRUE((inv_mat-inv_mat_rebuilt).squaredNorm()/inv_mat_rebuilt.squaredNorm() < 1E-8);
+  }
+
+  /*
+   * Now we place c
+   */
+  for (int itest=0; itest<100; ++itest) {
+    const Scalar det_old = det_mat.compute_determinant();
+
+    std::vector<annihilator> c_ops = det_mat.get_c_ops();
+    std::random_shuffle(c_ops.begin(), c_ops.end(), rs);
+    c_ops.resize(1);
+    annihilator new_c(n_flavors*unidist(gen), unidist(gen)*beta);
+    const Scalar det_rat_fast_update = det_mat.try_replace_c(c_ops[0], new_c);
+
+    const bool singular =  std::abs(det_rat_fast_update) < 1E-5 || std::abs(det_rat_fast_update) > 1E+5;
+
+    if (std::abs(det_rat_fast_update) > unidist(gen) && !singular) {
+      det_mat.perform_replace_c();
+      const Scalar det_new = det_mat.compute_determinant();
+      ASSERT_TRUE(std::abs(det_new/det_old-det_rat_fast_update) / std::abs(det_rat_fast_update) < 1E-8);
+    } else {
+      det_mat.reject_replace_c();
+    }
+
+    //check inverse matrix
+    eigen_matrix_t inv_mat = det_mat.compute_inverse_matrix_time_ordered();
+    det_mat.rebuild_inverse_matrix();
+    eigen_matrix_t inv_mat_rebuilt = det_mat.compute_inverse_matrix_time_ordered();
+    ASSERT_TRUE((inv_mat-inv_mat_rebuilt).squaredNorm()/inv_mat_rebuilt.squaredNorm() < 1E-8);
+  }
+
+}

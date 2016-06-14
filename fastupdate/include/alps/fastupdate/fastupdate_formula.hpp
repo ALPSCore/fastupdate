@@ -151,74 +151,28 @@ namespace alps {
      */
     template<typename Scalar, typename Derived>
     Scalar compute_det_ratio_relace_last_row(const ResizableMatrix<Scalar> & invG,
-                                   const Eigen::MatrixBase<Derived>& new_row_elements) {
-      assert(new_row_elements.rows()==1);
-      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> r(1,1);
-      r = new_row_elements*invG.block().col(invG.size2()-1);
-      return r(0,0);
-    }
+                                   const Eigen::MatrixBase<Derived>& new_row_elements);
 
     /**
      * Replace the last row of the G matrix
      */
     template<typename Scalar, typename Derived>
     void compute_inverse_matrix_replace_last_row(ResizableMatrix<Scalar> & invG,
-                             const Eigen::MatrixBase<Derived>& new_row_elements, Scalar det_rat) {
-      assert(new_row_elements.rows()==1);
-
-      const int N = invG.size1();
-      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> R(1, N), last_col(N,1);
-      last_col = invG.block().col(N-1);
-
-      R(0, N-1) = 0.0;
-      R.block(0,0, 1,N-1) = new_row_elements*invG.block(0,0, N,N-1);
-      const Scalar inv_det_rat = 1.0/det_rat;
-      invG.block().col(N-1) = last_col*inv_det_rat;
-
-      for (int m = 0; m < N-1; m++) {
-        for (int n = 0; n < N; n++) {
-          invG(n, m) -= last_col(n,0)*R(0,m)*inv_det_rat;
-        }
-      }
-    }
+                             const Eigen::MatrixBase<Derived>& new_row_elements, Scalar det_rat);
 
     /**
      * Compute deteterminat ratio for the replacement of the last column of the G matrix
      */
     template<typename Scalar, typename Derived>
     Scalar compute_det_ratio_relace_last_col(const ResizableMatrix<Scalar> & invG,
-                                             const Eigen::MatrixBase<Derived>& new_col_elements) {
-      assert(new_col_elements.cols()==1);
-      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> r(1,1);
-      r = invG.block().row(invG.size2()-1)*new_col_elements;
-      return r(0,0);
-    }
+                                             const Eigen::MatrixBase<Derived>& new_col_elements);
 
     /**
      * Replace the last col of the G matrix
      */
     template<typename Scalar, typename Derived>
     void compute_inverse_matrix_replace_last_col(ResizableMatrix<Scalar> & invG,
-                                                 const Eigen::MatrixBase<Derived>& new_col_elements, Scalar det_rat) {
-      assert(new_col_elements.cols()==1);
-
-      const int N = invG.size1();
-      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> R(N, 1), last_row(1,N);
-      last_row = invG.block().row(N-1);
-
-      R(N-1, 0) = 0.0;
-      R.block(0,0, N-1,1) = invG.block(0,0, N-1,N)*new_col_elements;
-
-      const Scalar inv_det_rat = 1.0/det_rat;
-      invG.block().row(N-1) = last_row*inv_det_rat;
-
-      for (int m = 0; m < N-1; m++) {
-        for (int n = 0; n < N; n++) {
-          invG(m, n) -= last_row(0,n)*R(m,0)*inv_det_rat;
-        }
-      }
-    }
-
+                                                 const Eigen::MatrixBase<Derived>& new_col_elements, Scalar det_rat);
   }
 }
 

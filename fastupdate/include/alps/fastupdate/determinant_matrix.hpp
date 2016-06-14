@@ -26,8 +26,8 @@ namespace alps {
       try_add_called = 1,
       try_rem_called = 2,
       try_rem_add_called = 3,
-      try_replace_cdagg__called = 4,
-      try_replace_c__called = 5
+      try_replace_cdagg_called = 4,
+      try_replace_c_called = 5
     };
 
     /**
@@ -144,12 +144,29 @@ namespace alps {
 
       void reject_remove();
 
+      /**
+       * Try to replace a creation operator
+       */
       Scalar try_replace_cdagg(
               const CdaggerOp & old_cdagg,
               const CdaggerOp & new_cdagg
       );
-      Scalar perform_replace_cdagg();
-      Scalar reject_replace_cdagg();
+
+      void perform_replace_cdagg();
+
+      void reject_replace_cdagg();
+
+      /**
+       * Try to replace an annihilation operator
+       */
+      Scalar try_replace_c(
+        const COp & old_c,
+        const COp & new_c
+      );
+
+      void perform_replace_c();
+
+      void reject_replace_c();
 
 
       /**
@@ -287,3 +304,4 @@ namespace alps {
 #include "detail/determinant_matrix_add.ipp"
 #include "detail/determinant_matrix_remove.ipp"
 #include "detail/determinant_matrix_remove_add.ipp"
+#include "detail/determinant_matrix_replace.ipp"
