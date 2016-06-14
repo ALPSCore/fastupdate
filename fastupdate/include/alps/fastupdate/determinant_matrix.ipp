@@ -91,7 +91,7 @@ namespace alps {
         times_rem[2*iop] = operator_time(it->first);
         times_rem[2*iop+1] = operator_time(it->second);
         if (!tmp) {
-          return false;
+          throw std::runtime_error("Error in removal_insertion_possible: some operator to be removed is missing!");
         }
         ++iop;
       }
@@ -153,6 +153,7 @@ namespace alps {
         times_rem[2*iop] = t1;
         times_rem[2*iop+1] = t2;
         if (!tmp) {
+          throw std::runtime_error("Error in removal_possible: some operator to be removed is missing!");
           possible = false;
           break;
         }
@@ -350,7 +351,11 @@ namespace alps {
       for (int iop=0; iop<mat_rank; ++iop) {
         assert(find_cdagg(cdagg_ops_[iop])<mat_rank);
         assert(find_c(c_ops_[iop])<mat_rank);
+        for (int iop2=0; iop2<mat_rank; ++iop2) {
+          assert(!alps::fastupdate::my_isnan(inv_matrix_(iop,iop2)));
+        }
       }
+
 #endif
     }
 
@@ -373,9 +378,15 @@ namespace alps {
           inv_matrix_(i,j) = gf_(c_ops_[i], cdagg_ops_[j]);
         }
       }
+      //std::cout << "matrix " << inv_matrix_ << std::endl;
+      //std::cout << "det matrix " << inv_matrix_.safe_determinant() << std::endl;
       inv_matrix_.invert();
+      //std::cout << "inv_matrix " << inv_matrix_ << std::endl;
+
+      sanity_check();
     }
 
+    /*
     template<
       typename Scalar,
       typename GreensFunction,
@@ -397,7 +408,9 @@ namespace alps {
       }
       return matrix;
     }
+    */
 
+    /*
     template<
       typename Scalar,
       typename GreensFunction,
@@ -424,6 +437,7 @@ namespace alps {
 
       return inv_mat_ordered;
     }
+    */
 
     template<
       typename Scalar,
@@ -439,6 +453,167 @@ namespace alps {
         std::cout << "operator at row/col " << iop << " " << operator_time(c_ops_[iop]) << " " << operator_time(cdagg_ops_[iop]) << std::endl;
       }
     }
+
+    template<typename CdaggerOp, typename COp, typename IteratorCdaggerOp, typename IteratorCOp>
+    std::vector<std::pair<CdaggerOp,COp> >
+    to_operator_pairs(IteratorCdaggerOp cdagg_first, IteratorCOp c_first, int nop) {
+      std::vector<std::pair<CdaggerOp,COp> > ops;
+      ops.reserve(nop);
+      IteratorCdaggerOp it_cdagg = cdagg_first;
+      IteratorCOp       it_c     = c_first;
+      for (int iop=0; iop<nop; ++iop) {
+        ops.push_back(std::make_pair(*it_cdagg, *it_c));
+        ++it_c;
+        ++it_cdagg;
+      }
+      return ops;
+    };
+
+
+    template<
+      typename Scalar,
+      typename GreensFunction,
+      typename CdaggerOp,
+      typename COp
+    >
+    template<typename CdaggIterator, typename CIterator, typename CdaggIterator2, typename CIterator2>
+    Scalar
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::try_update(
+      CdaggIterator  cdagg_rem_first,  CdaggIterator  cdagg_rem_last,
+      CIterator      c_rem_first,      CIterator      c_rem_last,
+      CdaggIterator2 cdagg_add_first,  CdaggIterator2 cdagg_add_last,
+      CIterator2     c_add_first,      CIterator2     c_add_last
+    ) {
+      sanity_check();
+
+      const int n_cdagg_add = std::distance(cdagg_add_first, cdagg_add_last);
+      const int n_cdagg_rem = std::distance(cdagg_rem_first, cdagg_rem_last);
+      const int n_c_add = std::distance(c_add_first, c_add_last);
+      const int n_c_rem = std::distance(c_rem_first, c_rem_last);
+
+      if (n_cdagg_add-n_cdagg_rem != n_c_add-n_c_rem) {
+        update_mode_ = invalid_operation;
+        return 0.0;
+      }
+
+      if (n_cdagg_add==0 && n_cdagg_rem==0 && n_c_add==0 && n_c_rem==0) {
+        update_mode_ = do_nothing;
+        return 1.0;
+      }
+
+      Scalar det_rat;
+      if (n_cdagg_add==1 && n_cdagg_rem==1 && n_c_add==0 && n_c_rem==0) {
+        update_mode_ = replace_cdagg;
+        det_rat = try_replace_cdagg(*cdagg_rem_first, *cdagg_add_first);
+
+      } else if (n_cdagg_add==0 && n_cdagg_rem==0 && n_c_add==1 && n_c_rem==1) {
+        update_mode_ = replace_c;
+        det_rat = try_replace_c(*c_rem_first, *c_add_first);
+
+      } else if (n_cdagg_add >0 && n_cdagg_rem==0 && n_c_add >0 && n_c_rem==0) {
+
+        update_mode_ = add;
+        const std::vector<std::pair<CdaggerOp,COp> >& ops_add =
+          to_operator_pairs<CdaggerOp,COp>(cdagg_add_first, c_add_first, n_cdagg_add);
+        det_rat = try_add(ops_add.begin(), ops_add.end());
+
+      } else if (n_cdagg_add==0 && n_cdagg_rem >0 && n_c_add==0 && n_c_rem >0) {
+
+        update_mode_ = rem;
+        const std::vector<std::pair<CdaggerOp,COp> >& ops_rem =
+          to_operator_pairs<CdaggerOp,COp>(cdagg_rem_first, c_rem_first, n_cdagg_rem);
+        det_rat = try_remove(ops_rem.begin(), ops_rem.end());
+
+      } else {
+
+        update_mode_ = rem_add;
+        const std::vector<std::pair<CdaggerOp,COp> >& ops_add =
+          to_operator_pairs<CdaggerOp,COp>(cdagg_add_first, c_add_first, n_cdagg_add);
+        const std::vector<std::pair<CdaggerOp,COp> >& ops_rem =
+          to_operator_pairs<CdaggerOp,COp>(cdagg_rem_first, c_rem_first, n_cdagg_rem);
+        det_rat = try_remove_add(
+          ops_rem.begin(), ops_rem.end(),
+          ops_add.begin(), ops_add.end()
+        );
+      }
+
+      assert(!my_isnan(det_rat));
+      return det_rat;
+    };
+
+    template<
+      typename Scalar,
+      typename GreensFunction,
+      typename CdaggerOp,
+      typename COp
+    >
+    void
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::perform_update() {
+      switch (update_mode_) {
+        case do_nothing:
+          break;
+
+        case replace_cdagg:
+          perform_replace_cdagg();
+          break;
+
+        case replace_c:
+          perform_replace_c();
+          break;
+
+        case add:
+          perform_add();
+          break;
+
+        case rem:
+          perform_remove();
+          break;
+
+        case rem_add:
+          perform_remove_add();
+          break;
+
+        case invalid_operation:
+          break;
+      }
+    };
+
+    template<
+      typename Scalar,
+      typename GreensFunction,
+      typename CdaggerOp,
+      typename COp
+    >
+    void
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_update() {
+      switch (update_mode_) {
+        case do_nothing:
+          break;
+
+        case replace_cdagg:
+          reject_replace_cdagg();
+          break;
+
+        case replace_c:
+          reject_replace_c();
+          break;
+
+        case add:
+          reject_add();
+          break;
+
+        case rem:
+          reject_remove();
+          break;
+
+        case rem_add:
+          reject_remove_add();
+          break;
+
+        case invalid_operation:
+          break;
+      }
+    };
 
   }
 }

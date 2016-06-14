@@ -148,6 +148,64 @@ namespace alps {
       return mat_copy.inverse()/max_coeff;
     }
 
+    //Comb sort (in ascending order). Returns the permutation sign (1 or -1)
+    //Assumption: no duplicate members
+    //Compare: lesser operator
+    template<typename Iterator, typename Compare>
+    int
+    comb_sort(Iterator first, Iterator end, const Compare& compare) {
+      using std::swap;
 
+      const int N = std::distance(first, end);
+
+      int count_exchange = 0;
+
+      int gap = static_cast<int>(N/1.3);
+      while(true) {
+        bool swapped = false;
+
+        Iterator it1 = first;
+        Iterator it2 = first;
+        std::advance(it2, gap);
+        for (int i=0; i+gap<N; ++i) {
+          if (compare(*it2, *it1)) {
+            swap(*it1, *it2);
+            ++count_exchange;
+            swapped = true;
+          }
+          ++it1;
+          ++it2;
+        }
+
+        if (!swapped && gap==1) {
+          break;
+        }
+
+        gap = std::max(static_cast<int>(gap/1.3),1);
+      }
+
+      return count_exchange%2==0 ? 1 : -1;
+    }
+
+    inline bool my_isnan(double x) {
+      return std::isnan(x);
+    }
+
+    inline bool my_isnan(std::complex<double> x) {
+      return my_isnan(x.real()) || my_isnan(x.imag());
+    }
+
+    template<typename Scalar, typename M>
+    std::vector<Scalar>
+    lu_product(const M& matrix) {
+      Eigen::FullPivLU<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> > lu(matrix);
+      const int size1 = lu.rows();
+      std::vector<Scalar> results(size1);
+      for (int i = 0; i < size1; ++i) {
+        results[i] = lu.matrixLU()(i,i);
+      }
+      results[0] *= lu.permutationP().determinant()*lu.permutationQ().determinant();
+      return results;
+    };
   }
 }

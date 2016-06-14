@@ -12,6 +12,7 @@
 #include "gtest.h"
 
 #include <alps/fastupdate/determinant_matrix.hpp>
+#include <alps/fastupdate/determinant_matrix_partitioned.hpp>
 #include <alps/fastupdate/fastupdate_formula.hpp>
 #include "util.hpp"
 
@@ -85,6 +86,10 @@ inline bool operator<(const c_or_cdagger& op1, const c_or_cdagger& op2) {
   return operator_time(op1) < operator_time(op2);
 }
 
+inline bool operator==(const c_or_cdagger& op1, const c_or_cdagger& op2) {
+  return operator_time(op1) == operator_time(op2);
+}
+
 class creator : public c_or_cdagger {
 public:
   creator() : c_or_cdagger() {};
@@ -103,8 +108,16 @@ struct OffDiagonalG0 {
   OffDiagonalG0 (double beta, int n_flavor, const std::vector<double>& E, const boost::multi_array<T,2>& phase) : beta_(beta), n_flavor_(n_flavor), E_(E), phase_(phase) {}
 
   int nflavor() const {return n_flavor_;}
+  int num_flavors() const {return n_flavor_;}
+  bool is_connected(int flavor, int flavor2) const {
+    //return flavor%2==flavor2%2;
+    return flavor==flavor2;
+  }
 
   T operator() (const annihilator& c_op, const creator& cdagg_op) const {
+    if (!is_connected(operator_flavor(c_op), operator_flavor(cdagg_op))) {
+      return 0.0;
+    }
     const double dt = c_op.time()-cdagg_op.time();
     double dt_tmp = dt;
     if (dt_tmp > beta_) dt_tmp -= beta_;
@@ -125,3 +138,18 @@ struct OffDiagonalG0 {
   boost::multi_array<T,2> phase_;
 };
 
+
+
+typedef ::testing::Types<
+  alps::fastupdate::DeterminantMatrix<
+    std::complex<double>,
+    OffDiagonalG0<std::complex<double> >,
+    creator,
+    annihilator>,
+  alps::fastupdate::DeterminantMatrixPartitioned<
+    std::complex<double>,
+    OffDiagonalG0<std::complex<double> >,
+    creator,
+    annihilator
+  >
+>TestTypes;

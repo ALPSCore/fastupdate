@@ -43,6 +43,9 @@ namespace alps {
         perm_rat_ *= -1;
       }
 
+      //std::cout << "computing " << det_rat_ << std::endl;
+      //std::cout << "inv_matrix " << inv_matrix_ << std::endl;
+      //std::cout << "G_j_n " << G_j_n_ << std::endl;
       det_rat_ = compute_det_ratio_relace_last_col(inv_matrix_, G_j_n_);
       return (1.*perm_rat_)*det_rat_;
     }

@@ -9,13 +9,13 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    template<typename CdaggCIterator>
+    template<typename CdaggCIterator, typename CdaggCIterator2>
     Scalar
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::try_remove_add(
-      CdaggCIterator cdagg_c_rem_first,
-      CdaggCIterator cdagg_c_rem_last,
-      CdaggCIterator cdagg_c_add_first,
-      CdaggCIterator cdagg_c_add_last
+      CdaggCIterator  cdagg_c_rem_first,
+      CdaggCIterator  cdagg_c_rem_last,
+      CdaggCIterator2 cdagg_c_add_first,
+      CdaggCIterator2 cdagg_c_add_last
     ) {
       check_state(waiting);
       state_ = try_rem_add_called;
@@ -25,9 +25,11 @@ namespace alps {
       const int nop = inv_matrix_.size1();
       const int nop_unchanged = nop - nop_rem;
 
+      update_impossible_ = false;
       if (!removal_insertion_possible(
         cdagg_c_rem_first, cdagg_c_rem_last, cdagg_c_add_first, cdagg_c_add_last)
         ) {
+        update_impossible_ = true;
         return 0.0;
       }
 
@@ -86,6 +88,8 @@ namespace alps {
         }
       }
 
+      nop_added_ = std::distance(cdagg_c_add_first, cdagg_c_add_last);
+
       replace_helper_
         = ReplaceHelper<Scalar,eigen_matrix_t,eigen_matrix_t,eigen_matrix_t>(inv_matrix_, G_j_n_, G_n_j_, G_n_n_);
       return static_cast<double>(perm_rat_)*replace_helper_.compute_det_ratio(inv_matrix_, G_j_n_, G_n_j_, G_n_n_);
@@ -103,6 +107,8 @@ namespace alps {
       check_state(try_rem_add_called);
       state_ = waiting;
 
+      if (update_impossible_) return;
+
       permutation_row_col_ *= perm_rat_;
       sanity_check();
     }
@@ -113,19 +119,13 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    template<typename CdaggCIterator>
     void
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_remove_add(
-      CdaggCIterator cdagg_c_rem_first,
-      CdaggCIterator cdagg_c_rem_last,
-      CdaggCIterator cdagg_c_add_first,
-      CdaggCIterator cdagg_c_add_last
-    ) {
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::reject_remove_add() {
       check_state(try_rem_add_called);
       state_ = waiting;
 
       //then the last operators
-      remove_last_operators(std::distance(cdagg_c_add_first, cdagg_c_add_last));
+      remove_last_operators(nop_added_);
 
       //then insert the removed operators back
       add_new_operators(removed_op_pairs_.rbegin(), removed_op_pairs_.rend());
