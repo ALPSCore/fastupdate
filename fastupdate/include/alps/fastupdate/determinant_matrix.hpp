@@ -93,8 +93,8 @@ namespace alps {
       inline int size() const {return inv_matrix_.size1();}
 
       //Getter
-      inline const cdagg_container_t& get_cdagg_ops() const { return cdagg_ops_; }
-      inline const c_container_t& get_c_ops() const { return c_ops_; }
+      inline cdagg_container_t get_cdagg_ops() const { return cdagg_ops_; }
+      inline c_container_t get_c_ops() const { return c_ops_; }
 
       /**
        * Compute determinant. This may suffer from overflow

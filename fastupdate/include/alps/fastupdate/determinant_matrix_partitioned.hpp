@@ -95,13 +95,27 @@ namespace alps {
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
 
       //Getter: costs O(N)
-      inline const cdagg_container_t& get_cdagg_ops() const {
-        return cdagg_ops_;
+      cdagg_container_t get_cdagg_ops() const {
+        std::vector<CdaggerOp> ops;
+        for (int sector=0; sector<num_sectors_; ++sector) {
+          const std::vector<CdaggerOp>& ops_tmp =
+                  p_det_mat_[sector]->get_cdagg_ops();
+          std::copy(ops_tmp.begin(), ops_tmp.end(), std::back_inserter(ops));
+        }
+        assert(ops.size()==size());
+        return ops;
       }
 
       //Getter: costs O(N)
-      inline const c_container_t& get_c_ops() const {
-        return c_ops_;
+      c_container_t get_c_ops() const {
+        std::vector<COp> ops;
+        for (int sector=0; sector<num_sectors_; ++sector) {
+          const std::vector<COp>& ops_tmp =
+                  p_det_mat_[sector]->get_c_ops();
+          std::copy(ops_tmp.begin(), ops_tmp.end(), std::back_inserter(ops));
+        }
+        assert(ops.size()==size());
+        return ops;
       }
 
       /**

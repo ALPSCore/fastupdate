@@ -47,13 +47,13 @@ namespace alps {
       ) {};
 
       //size of matrix
-      inline int size() const;
+      int size() const;
 
       //Getter: costs O(N)
-      inline const cdagg_container_t& get_cdagg_ops() const;
+      cdagg_container_t get_cdagg_ops() const;
 
       //Getter: costs O(N)
-      inline const c_container_t& get_c_ops() const;
+      c_container_t get_c_ops() const;
 
       /**
        * Compute determinant. This may suffer from overflow
