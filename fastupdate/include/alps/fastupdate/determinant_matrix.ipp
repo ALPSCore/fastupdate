@@ -10,7 +10,8 @@ namespace alps {
       typename COp
     >
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::DeterminantMatrix(const GreensFunction& gf)
-      : state_(waiting),
+      : Base(gf),
+        state_(waiting),
         inv_matrix_(0,0),
         permutation_row_col_(1),
         gf_(gf)
@@ -29,7 +30,8 @@ namespace alps {
       CdaggCIterator first,
       CdaggCIterator last
     )
-      : state_(waiting),
+      : Base(gf),
+        state_(waiting),
         inv_matrix_(0,0),
         permutation_row_col_(1),
         gf_(gf)

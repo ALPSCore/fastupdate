@@ -12,6 +12,8 @@
 #include "util.hpp"
 #include "detail/clustering.hpp"
 
+#include "determinant_matrix_base.hpp"
+
 namespace alps {
   namespace fastupdate {
 
@@ -28,11 +30,26 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    class DeterminantMatrixPartitioned {
+    class DeterminantMatrixPartitioned
+            : public DeterminantMatrixBase<
+                    Scalar,
+                    GreensFunction,
+                    CdaggerOp,
+                    COp,
+                    DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>
+            >
+    {
     private:
       typedef std::vector<CdaggerOp> cdagg_container_t;
       typedef std::vector<COp> c_container_t;
       typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> eigen_matrix_t;
+      typedef DeterminantMatrixBase<
+              Scalar,
+              GreensFunction,
+              CdaggerOp,
+              COp,
+              DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>
+            > Base;
 
       enum State {
         waiting = 0,
@@ -64,12 +81,12 @@ namespace alps {
       };
 
     public:
-      DeterminantMatrixPartitioned(
+      DeterminantMatrixPartitioned (
         const GreensFunction& gf
       );
 
       template<typename CdaggCIterator>
-      DeterminantMatrixPartitioned(
+      DeterminantMatrixPartitioned (
         const GreensFunction& gf,
         CdaggCIterator first,
         CdaggCIterator last

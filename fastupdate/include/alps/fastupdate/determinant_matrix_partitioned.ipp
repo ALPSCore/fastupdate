@@ -10,7 +10,8 @@ namespace alps {
       typename COp
     >
     DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::DeterminantMatrixPartitioned(const GreensFunction &gf)
-      : state_(waiting),
+      : Base(gf),
+        state_(waiting),
         num_flavors_(gf.num_flavors()),
         num_sectors_(-1),
         permutation_(1) {
@@ -30,7 +31,9 @@ namespace alps {
       CdaggCIterator first,
       CdaggCIterator last
     )
-      : state_(waiting),
+      :
+        Base(gf),
+        state_(waiting),
         num_flavors_(gf.num_flavors()),
         num_sectors_(-1),
         permutation_(1) {

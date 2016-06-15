@@ -12,6 +12,8 @@
 #include "fastupdate_formula.hpp"
 #include "util.hpp"
 
+#include "determinant_matrix_base.hpp"
+
 namespace alps {
   namespace fastupdate {
 
@@ -28,8 +30,23 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    class DeterminantMatrix {
+    class DeterminantMatrix
+            : public DeterminantMatrixBase<
+                    Scalar,
+                    GreensFunction,
+                    CdaggerOp,
+                    COp,
+                    DeterminantMatrix<Scalar, GreensFunction, CdaggerOp, COp>
+                  >
+    {
     private:
+      typedef DeterminantMatrixBase<
+        Scalar,
+        GreensFunction,
+        CdaggerOp,
+        COp,
+        DeterminantMatrix<Scalar, GreensFunction, CdaggerOp, COp>
+      > Base;
       typedef typename CdaggerOp::itime_type itime_t;
       typedef std::vector<CdaggerOp> cdagg_container_t;
       typedef std::vector<COp> c_container_t;
