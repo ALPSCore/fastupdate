@@ -1,4 +1,4 @@
-#include "determinant_matrix.hpp"
+#include "../determinant_matrix.hpp"
 
 namespace alps {
   namespace fastupdate {
@@ -346,15 +346,15 @@ namespace alps {
       }
 
       assert(permutation_row_col_ ==
-               permutation(c_ops_.begin(), c_ops_.begin()+mat_rank)*
-               permutation(cdagg_ops_.begin(), cdagg_ops_.begin()+mat_rank)
+               detail::permutation(c_ops_.begin(), c_ops_.begin()+mat_rank)*
+               detail::permutation(cdagg_ops_.begin(), cdagg_ops_.begin()+mat_rank)
       );
 
       for (int iop=0; iop<mat_rank; ++iop) {
         assert(find_cdagg(cdagg_ops_[iop])<mat_rank);
         assert(find_c(c_ops_[iop])<mat_rank);
         for (int iop2=0; iop2<mat_rank; ++iop2) {
-          assert(!alps::fastupdate::my_isnan(inv_matrix_(iop,iop2)));
+          assert(!detail::my_isnan(inv_matrix_(iop,iop2)));
         }
       }
 
@@ -539,7 +539,7 @@ namespace alps {
         );
       }
 
-      assert(!my_isnan(det_rat));
+      assert(!detail::my_isnan(det_rat));
       return det_rat;
     };
 

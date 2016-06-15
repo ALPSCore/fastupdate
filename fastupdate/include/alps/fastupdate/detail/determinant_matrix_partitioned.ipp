@@ -1,4 +1,4 @@
-#include "determinant_matrix_partitioned.hpp"
+#include "../determinant_matrix_partitioned.hpp"
 
 namespace alps {
   namespace fastupdate {
@@ -166,11 +166,11 @@ namespace alps {
       }
 
       //Count permutation
-      comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareOverSectors<CdaggerOp>());
-      comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareOverSectors<COp>());
+      detail::comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareOverSectors<CdaggerOp>());
+      detail::comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareOverSectors<COp>());
       new_perm_ =
-        comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareWithinSectors<CdaggerOp>())*
-        comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareWithinSectors<COp>());
+        detail::comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareWithinSectors<CdaggerOp>())*
+        detail::comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareWithinSectors<COp>());
 
       //Second, compute determinant ratio from each sector
       Scalar det_rat = 1.0;
@@ -254,11 +254,11 @@ namespace alps {
       }
       assert(size()==pert_order);
 
-      comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareOverSectors<CdaggerOp>());
-      comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareOverSectors<COp>());
+      detail::comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareOverSectors<CdaggerOp>());
+      detail::comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareOverSectors<COp>());
       const int perm_recomputed =
-              comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareWithinSectors<CdaggerOp>())*
-        comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareWithinSectors<COp>());
+        detail::comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareWithinSectors<CdaggerOp>())*
+        detail::comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareWithinSectors<COp>());
       assert(permutation_ == perm_recomputed);
 #endif
     }

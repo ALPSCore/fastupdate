@@ -10,7 +10,7 @@
 
 #include<Eigen/Dense>
 #include<Eigen/LU>
-#include "util.hpp"
+#include "./detail/util.hpp"
 
 #define ALPS_STRONG_INLINE inline
 
@@ -227,7 +227,7 @@ namespace alps {
         if (size == 1) return operator()(0, 0);
         if (size == 2) return operator()(0, 0) * operator()(1, 1) - operator()(0, 1) * operator()(1, 0);
 
-        return safe_determinant_eigen_block(block());
+        return detail::safe_determinant_eigen_block(block());
       }
 
 
@@ -278,7 +278,7 @@ namespace alps {
         assert(is_allocated());
         assert(size1_ == size2_);
         if (is_allocated() && size1_*size2_ > 0) {
-          eigen_matrix_t inv = safe_inverse(block());
+          eigen_matrix_t inv = detail::safe_inverse(block());
           values_ = inv;
         }
       }

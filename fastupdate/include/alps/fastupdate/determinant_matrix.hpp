@@ -10,7 +10,7 @@
 #include <Eigen/Dense>
 
 #include "fastupdate_formula.hpp"
-#include "util.hpp"
+#include "./detail/util.hpp"
 
 #include "determinant_matrix_base.hpp"
 
@@ -104,7 +104,7 @@ namespace alps {
       }
 
       std::vector<Scalar> compute_determinant_as_product() const {
-        const std::vector<Scalar>& vec = lu_product<Scalar>(inv_matrix_.block());
+        const std::vector<Scalar>& vec = detail::lu_product<Scalar>(inv_matrix_.block());
         std::vector<Scalar> r(vec.size());
         std::transform(
                 vec.begin(), vec.end(), r.begin(),
@@ -115,6 +115,7 @@ namespace alps {
         if (r.size()>0) {
           r[0] *= 1.*permutation_row_col_;
         }
+        std::sort(r.begin(), r.end(), detail::lesser_by_abs<Scalar>);
         return r;
       }
 
@@ -350,8 +351,8 @@ namespace alps {
   }
 }
 
-#include "determinant_matrix.ipp"
-#include "detail/determinant_matrix_add.ipp"
-#include "detail/determinant_matrix_remove.ipp"
-#include "detail/determinant_matrix_remove_add.ipp"
-#include "detail/determinant_matrix_replace.ipp"
+#include "./detail/determinant_matrix.ipp"
+#include "./detail/determinant_matrix_add.ipp"
+#include "./detail/determinant_matrix_remove.ipp"
+#include "./detail/determinant_matrix_remove_add.ipp"
+#include "./detail/determinant_matrix_replace.ipp"

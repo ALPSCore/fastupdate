@@ -9,14 +9,13 @@
 
 #include "determinant_matrix.hpp"
 #include "fastupdate_formula.hpp"
-#include "util.hpp"
-#include "detail/clustering.hpp"
+#include "./detail/util.hpp"
+#include "./detail/clustering.hpp"
 
 #include "determinant_matrix_base.hpp"
 
 namespace alps {
   namespace fastupdate {
-
     /**
      * CdaggerOp and COp must have the following functionalities
      *   CdaggerOp::itime_type, COp::itime_type the type of time
@@ -128,6 +127,7 @@ namespace alps {
         if (r.size() > 0) {
           r[0] *= permutation_;
         }
+        std::sort(r.begin(), r.end(), detail::lesser_by_abs<Scalar>);
         return r;
       }
 
@@ -305,4 +305,4 @@ namespace alps {
   }
 }
 
-#include "determinant_matrix_partitioned.ipp"
+#include "./detail/determinant_matrix_partitioned.ipp"

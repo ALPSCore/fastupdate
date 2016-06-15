@@ -6,7 +6,7 @@
 #pragma once
 
 #include "resizable_matrix.hpp"
-#include "util.hpp"
+#include "./detail/util.hpp"
 
 
 namespace alps {
@@ -176,4 +176,4 @@ namespace alps {
   }
 }
 
-#include "fastupdate_formula.ipp"
+#include "./detail/fastupdate_formula.ipp"

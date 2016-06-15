@@ -4,7 +4,7 @@
  *
  */
 
-#include "fastupdate_formula.hpp"
+#include "../fastupdate_formula.hpp"
 
 /**
  * Some utilities
@@ -47,10 +47,10 @@ namespace alps {
       assert(num_rows(D) == M && num_cols(D) == M);
 
       if (N == 0) {
-        return safe_determinant(D);
+        return detail::safe_determinant(D);
       } else {
         //compute H
-        return safe_determinant(D - C * invA.block() * B);
+        return detail::safe_determinant(D - C * invA.block() * B);
       }
     }
 
@@ -74,15 +74,15 @@ namespace alps {
       assert(num_rows(D) == M && num_cols(D) == M);
 
       if (N == 0) {
-        invA = safe_inverse(D);
-        return safe_determinant(D);
+        invA = detail::safe_inverse(D);
+        return detail::safe_determinant(D);
       } else {
         //I don't know how expensive to allocate temporary objects C_invA, H, invA_B, F.
         //We could keep them as static objects or members of a class.
 
         //compute H
         const eigen_matrix_t C_invA = C * invA.block();
-        const eigen_matrix_t H = safe_inverse(D - C_invA * B);
+        const eigen_matrix_t H = detail::safe_inverse(D - C_invA * B);
 
         //compute F
         const eigen_matrix_t invA_B = invA.block() * B;
@@ -99,7 +99,7 @@ namespace alps {
         invA.block(0, N, N, M) = F;
         invA.block(N, N, M, M) = H;
 
-        return 1. / safe_determinant(H);
+        return 1. / detail::safe_determinant(H);
       }
     }
   }
@@ -138,7 +138,7 @@ namespace alps {
         }
       }
 
-      return perm % 2 == 0 ? safe_determinant(H) : -safe_determinant(H);
+      return perm % 2 == 0 ? detail::safe_determinant(H) : -detail::safe_determinant(H);
     }
 
     template<class Scalar>
@@ -161,7 +161,7 @@ namespace alps {
         }
       }
 
-      return safe_determinant(H);
+      return detail::safe_determinant(H);
     }
 
     template<class Scalar>
@@ -212,7 +212,7 @@ namespace alps {
         //(N,M)x(M,M)x(M,N)
         invG.block(0, 0, N, N).noalias() -=
           invG.block(0, N, N, M) *
-          safe_inverse(invG.block(N, N, M, M)) *
+          detail::safe_inverse(invG.block(N, N, M, M)) *
           invG.block(N, 0, M, N);
       }
       invG.conservative_resize(N, N);
@@ -247,7 +247,7 @@ namespace alps {
         //(N,M)x(M,M)x(M,N)
         invG.block(0, 0, N, N).noalias() -=
           invG.block(0, N, N, M) *
-          safe_inverse(invG.block(N, N, M, M)) *
+          detail::safe_inverse(invG.block(N, N, M, M)) *
           invG.block(N, 0, M, N);
       }
       invG.conservative_resize(N, N);
@@ -286,7 +286,7 @@ namespace alps {
                                                              const M1& R,
                                                              const M2& S) {
       if (N_ == 0) {
-        return safe_determinant(S)*invG.safe_determinant();
+        return detail::safe_determinant(S)*invG.safe_determinant();
       }
 
       block_t tP_view (invG.block(0,  0,  N_,     N_     ));
@@ -297,14 +297,14 @@ namespace alps {
       //matrix M
       Mmat_ = tP_view;
       if (M_old_ > 0) {
-        Mmat_.noalias() -= tQ_view * safe_inverse(tS_view) * tR_view; //(N, M_old) x (M_old, M_old) x (M_old, N)
+        Mmat_.noalias() -= tQ_view * detail::safe_inverse(tS_view) * tR_view; //(N, M_old) x (M_old, M_old) x (M_old, N)
       }
 
       //(tS')^{-1}
       inv_tSp_ = S;
       inv_tSp_.noalias() -= R * (Mmat_ * Q).eval(); //(M,N)x(N,N)x(N,M)
 
-      return safe_determinant(tS_view)*safe_determinant(inv_tSp_);
+      return detail::safe_determinant(tS_view)*detail::safe_determinant(inv_tSp_);
     }
 
     template<typename Scalar, typename M0, typename M1, typename M2>
@@ -315,7 +315,7 @@ namespace alps {
       if (N_ == 0) {
         invG.destructive_resize(M_, M_);
         if(M_ > 0) {
-          invG.block().noalias() = safe_inverse(S);
+          invG.block().noalias() = detail::safe_inverse(S);
         }
         return;
       }
@@ -328,7 +328,7 @@ namespace alps {
 
       if (M_ > 0) {
         //tSp
-        tSp_view.noalias() = safe_inverse(inv_tSp_);
+        tSp_view.noalias() = detail::safe_inverse(inv_tSp_);
 
         //tQp
         //(N,N)x(N,M)x(M,M) = (N,M)
