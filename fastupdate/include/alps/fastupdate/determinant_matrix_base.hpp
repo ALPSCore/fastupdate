@@ -46,8 +46,20 @@ namespace alps {
         CdaggCIterator last
       ) {};
 
-      //size of matrix
+      /** size of matrix */
       int size() const;
+
+      /** number of blocks */
+      int num_blocks() const;
+
+      /** size of a block */
+      int block_size(int block) const;
+
+      /** members (flavors) belonging to a given block */
+      const std::vector<int>& block_members(int block) const;
+
+      /** return the index of the block to which a given flavor belongs to */
+      const std::vector<int>& block_belonging_to(int flavor) const;
 
       /**
        * Return creation operators in the same order as in the result of compute_inverse_matrix
@@ -60,6 +72,16 @@ namespace alps {
        * The behavior is not unspecified when it's called during in an update, i.e., after calling update().
        */
       const c_container_t& get_c_ops() const;
+
+      /**
+       * Similar to get_cdagg_ops (without flattening over blocks)
+       */
+      const cdagg_container_t& get_cdagg_ops_block(int block) const;
+
+      /**
+       * Similar to get_c_ops (without flattening over blocks)
+       */
+      const c_container_t& get_c_ops_block() const;
 
       /**
        * Compute determinant. This may suffer from overflow

@@ -91,14 +91,35 @@ namespace alps {
         CdaggCIterator last
       );
 
-      //size of matrix
+      /** see determinant_matrix_base.hpp */
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
 
+      /** see determinant_matrix_base.hpp */
+      inline int num_blocks() const {return num_sectors_;}
+
+      /** see determinant_matrix_base.hpp */
+      int block_size(int block) const {
+        assert(block>=0 && block<num_blocks());
+        return p_det_mat_[block]->size();
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const std::vector<int>& block_members(int block) const {
+        return sector_members_[block];
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const std::vector<int>& block_belonging_to(int flavor) const {
+        return sector_belonging_to_[flavor];
+      }
+
+      /** see determinant_matrix_base.hpp */
       inline const cdagg_container_t& get_cdagg_ops() const {
         assert(state_==waiting);
         return cdagg_ops_actual_order_;
       }
 
+      /** see determinant_matrix_base.hpp */
       inline const c_container_t& get_c_ops() const {
         assert(state_==waiting);
         return c_ops_actual_order_;
