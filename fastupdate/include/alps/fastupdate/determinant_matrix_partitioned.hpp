@@ -94,28 +94,14 @@ namespace alps {
       //size of matrix
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
 
-      //Getter: costs O(N)
-      cdagg_container_t get_cdagg_ops() const {
-        std::vector<CdaggerOp> ops;
-        for (int sector=0; sector<num_sectors_; ++sector) {
-          const std::vector<CdaggerOp>& ops_tmp =
-                  p_det_mat_[sector]->get_cdagg_ops();
-          std::copy(ops_tmp.begin(), ops_tmp.end(), std::back_inserter(ops));
-        }
-        assert(ops.size()==size());
-        return ops;
+      inline const cdagg_container_t& get_cdagg_ops() const {
+        assert(state_==waiting);
+        return cdagg_ops_actual_order_;
       }
 
-      //Getter: costs O(N)
-      c_container_t get_c_ops() const {
-        std::vector<COp> ops;
-        for (int sector=0; sector<num_sectors_; ++sector) {
-          const std::vector<COp>& ops_tmp =
-                  p_det_mat_[sector]->get_c_ops();
-          std::copy(ops_tmp.begin(), ops_tmp.end(), std::back_inserter(ops));
-        }
-        assert(ops.size()==size());
-        return ops;
+      inline const c_container_t& get_c_ops() const {
+        assert(state_==waiting);
+        return c_ops_actual_order_;
       }
 
       /**
@@ -285,9 +271,11 @@ namespace alps {
       //second element: operator
       std::vector<std::pair<int,CdaggerOp> > cdagg_ops_ordered_in_sectors_;
       std::vector<std::pair<int,COp> > c_ops_ordered_in_sectors_;
-      //this is just a copy of second elements of cdagg_ops_ordered_in_sectors_ and c_ops_ordered_in_sectors_
-      std::vector<CdaggerOp> cdagg_ops_;
-      std::vector<COp> c_ops_;
+
+      //Creation and annihilation operators in the same as appearing in the block matrices (not always time-ordered at all)
+      //They are expected to be well-defined only when state is "waiting".
+      mutable std::vector<CdaggerOp> cdagg_ops_actual_order_;
+      mutable std::vector<COp> c_ops_actual_order_;
 
       //for update
       int new_perm_;
@@ -312,6 +300,23 @@ namespace alps {
           throw std::logic_error("Error: the system is not in a correct state!");
         }
       }
+
+      void reconstruct_operator_list_in_actual_order() {
+        cdagg_ops_actual_order_.resize(0);
+        c_ops_actual_order_.resize(0);
+        for (int sector=0; sector<num_sectors_; ++sector) {
+          const std::vector<CdaggerOp>& cdagg_ops_tmp =
+            p_det_mat_[sector]->get_cdagg_ops();
+          std::copy(cdagg_ops_tmp.begin(), cdagg_ops_tmp.end(), std::back_inserter(cdagg_ops_actual_order_));
+
+          const std::vector<COp>& c_ops_tmp =
+            p_det_mat_[sector]->get_c_ops();
+          std::copy(c_ops_tmp.begin(), c_ops_tmp.end(), std::back_inserter(c_ops_actual_order_));
+        }
+
+        assert(cdagg_ops_actual_order_.size()==size());
+        assert(c_ops_actual_order_.size()==size());
+      };
 
       void sanity_check();
 

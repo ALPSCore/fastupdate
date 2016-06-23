@@ -49,11 +49,17 @@ namespace alps {
       //size of matrix
       int size() const;
 
-      //Getter: costs O(N)
-      cdagg_container_t get_cdagg_ops() const;
+      /**
+       * Return creation operators in the same order as in the result of compute_inverse_matrix
+       * The behavior is not unspecified when it's called during in an update, i.e., after calling update().
+       */
+      const cdagg_container_t& get_cdagg_ops() const;
 
-      //Getter: costs O(N)
-      c_container_t get_c_ops() const;
+      /**
+       * Return annihilation operators in the same order as in the result of compute_inverse_matrix
+       * The behavior is not unspecified when it's called during in an update, i.e., after calling update().
+       */
+      const c_container_t& get_c_ops() const;
 
       /**
        * Compute determinant. This may suffer from overflow

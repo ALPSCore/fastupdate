@@ -200,15 +200,7 @@ namespace alps {
       std::swap(cdagg_ops_work_, cdagg_ops_ordered_in_sectors_);
       std::swap(c_ops_work_,     c_ops_ordered_in_sectors_);
 
-      cdagg_ops_.resize(size());
-      for (int i=0; i<size(); ++i) {
-        cdagg_ops_[i] = cdagg_ops_ordered_in_sectors_[i].second;
-      }
-
-      c_ops_.resize(size());
-      for (int i=0; i<size(); ++i) {
-        c_ops_[i] = c_ops_ordered_in_sectors_[i].second;
-      }
+      reconstruct_operator_list_in_actual_order();
 
       permutation_ = new_perm_;
       clear_work();
@@ -227,6 +219,7 @@ namespace alps {
       for (int sector=0; sector<num_sectors_; ++sector) {
         p_det_mat_[sector]->reject_update();
       }
+      reconstruct_operator_list_in_actual_order();//Operators may be swapped even if an update is rejected.
       clear_work();
     };
 
@@ -260,6 +253,19 @@ namespace alps {
         detail::comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareWithinSectors<CdaggerOp>())*
         detail::comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareWithinSectors<COp>());
       assert(permutation_ == perm_recomputed);
+
+      //check list of operators in actual order
+      if (state_ == waiting) {
+        int iop = 0;
+        for (int sector=0; sector<num_sectors_; ++sector) {
+          int sector_size = p_det_mat_[sector]->size();
+          for (int i=0; i<sector_size; ++i) {
+            assert(get_cdagg_ops()[iop]==p_det_mat_[sector]->get_cdagg_ops()[i]);
+            assert(get_c_ops()[iop]==p_det_mat_[sector]->get_c_ops()[i]);
+            ++iop;
+          }
+        }
+      }
 #endif
     }
   }
