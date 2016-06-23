@@ -25,7 +25,7 @@ namespace alps {
      *  For an instance of GreenFunction gf,
      *  Scalar gf.operator()(const COp&, const CdaggerOp&)
      *  bool   gf.is_connected(int flavor1, int flavor2);
-     *  bool   gf.num_flavors();
+     *  int    gf.num_flavors();
      */
     template<
       typename Scalar,
@@ -159,5 +159,7 @@ namespace alps {
        */
       void rebuild_inverse_matrix();
     };
+
+    using detail::comb_sort;
   }
 }
