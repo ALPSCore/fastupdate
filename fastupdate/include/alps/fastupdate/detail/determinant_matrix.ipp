@@ -89,7 +89,7 @@ namespace alps {
       std::vector<itime_t> times_rem(2*nop_rem);
       int iop = 0;
       for (CdaggCIterator it=first_removal; it!=last_removal; ++it) {
-        bool tmp = exist(it->first) && exist(it->second);
+        bool tmp = exist_cdagg(it->first) && exist_c(it->second);
         times_rem[2*iop] = operator_time(it->first);
         times_rem[2*iop+1] = operator_time(it->second);
         if (!tmp) {

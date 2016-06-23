@@ -136,6 +136,18 @@ namespace alps {
       }
 
       /** see determinant_matrix_base.hpp */
+      inline const cdagg_container_t& get_cdagg_ops(int block) const {
+        assert(state_==waiting);
+        return p_det_mat_[block]->get_cdagg_ops();
+      }
+
+      /** see determinant_matrix_base.hpp */
+      inline const c_container_t& get_c_ops(int block) const {
+        assert(state_==waiting);
+        return p_det_mat_[block]->get_c_ops();
+      }
+
+      /** see determinant_matrix_base.hpp */
       const cdagg_set_t& get_cdagg_ops_set() const {
         throw std::runtime_error("Not implemented!");
       }
@@ -199,6 +211,13 @@ namespace alps {
         return inv;
       }
 
+      /**
+       * Compute inverse matrix for a given block. The rows and cols may not be time-ordered.
+       */
+      eigen_matrix_t compute_inverse_matrix(int block) const {
+        assert(block>=0 && block<num_blocks());
+        return p_det_mat_[block]->compute_inverse_matrix();
+      }
 
       template<typename CdaggIterator, typename CIterator, typename CdaggIterator2, typename CIterator2>
       Scalar try_update(

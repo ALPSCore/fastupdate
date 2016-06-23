@@ -101,27 +101,31 @@ namespace alps {
       /**
        * Return a reference to a set of time-ordered creation operators
        */
-      const cdagg_set_t& get_cdagg_ops_set() const;
+      const cdagg_set_t& get_cdagg_ops_set() const {
+        throw std::runtime_error("Not implemented");
+      }
 
       /**
        * Return a reference to a set of time-ordered creation operators for a given block
        */
       const cdagg_set_t& get_cdagg_ops_set(int block) const {
         assert(block==0);
-        return get_cdagg_ops();
+        return get_cdagg_ops_set();
       }
 
       /**
        * Return a reference to a set of time-ordered annihilation operators
        */
-      const c_set_t& get_c_ops_set() const;
+      const c_set_t& get_c_ops_set() const {
+        throw std::runtime_error("Not implemented");
+      }
 
       /**
        * Return a reference to a set of time-ordered annihilation operators for a given block
        */
       const c_set_t& get_c_ops_set(int block) const {
         assert(block==0);
-        return get_c_ops();
+        return get_c_ops_set();
       }
 
       /**
@@ -353,12 +357,12 @@ namespace alps {
       inline Scalar compute_g(int row, int col) const {return gf_(c_ops_[row], cdagg_ops_[col]); }
 
       /** return if there is an operator at a given time */
-      inline bool exist(const CdaggerOp& cdagg) const {
+      inline bool exist_cdagg(const CdaggerOp& cdagg) const {
         return exist(operator_time(cdagg));
       }
 
       /** return if there is an operator at a given time */
-      inline bool exist(const COp& c) const {
+      inline bool exist_c(const COp& c) const {
         return exist(operator_time(c));
       }
 
