@@ -242,6 +242,7 @@ namespace alps {
         time_new = operator_time(it->first);
         perm_diff += std::distance(cdagg_op_pos_.lower_bound(time_new), cdagg_op_pos_.end());
         ret = cdagg_op_pos_.insert(std::make_pair(operator_time(it->first), pos));
+        cdagg_ops_set_.insert(it->first);
         if(ret.second==false) {
           throw std::runtime_error("Something went wrong: cdagg already exists");
         }
@@ -250,6 +251,7 @@ namespace alps {
         time_new = operator_time(it->second);
         perm_diff += std::distance(cop_pos_.lower_bound(time_new), cop_pos_.end());
         ret = cop_pos_.insert(std::make_pair(operator_time(it->second), pos));
+        c_ops_set_.insert(it->second);
         if(ret.second==false) {
           throw std::runtime_error("Something went wrong: c operator already exists");
         }
@@ -279,10 +281,12 @@ namespace alps {
         const itime_t t1 = operator_time(c_ops_.back());
         perm_diff += std::distance(cop_pos_.lower_bound(t1), cop_pos_.end());
         cop_pos_.erase(t1);
+        c_ops_set_.erase(c_ops_.back());
 
         const itime_t t2 = operator_time(cdagg_ops_.back());
         perm_diff += std::distance(cdagg_op_pos_.lower_bound(t2), cdagg_op_pos_.end());
         cdagg_op_pos_.erase(t2);
+        cdagg_ops_set_.erase(cdagg_ops_.back());
 
         c_ops_.pop_back();
         cdagg_ops_.pop_back();
@@ -305,7 +309,9 @@ namespace alps {
       //remove operators from std::map<operator_time,int>
       for (int iop=0; iop<nop_rem; ++iop) {
         cop_pos_.erase(operator_time(c_ops_[iop+offset]));
+        c_ops_set_.erase(c_ops_[iop+offset]);
         cdagg_op_pos_.erase(operator_time(cdagg_ops_[iop+offset]));
+        cdagg_ops_set_.erase(cdagg_ops_[iop+offset]);
       }
 
       cdagg_ops_.resize(offset);
@@ -357,6 +363,9 @@ namespace alps {
           assert(!detail::my_isnan(inv_matrix_(iop,iop2)));
         }
       }
+
+      assert(cdagg_ops_set_ == cdagg_set_t(cdagg_ops_.begin(), cdagg_ops_.end()));
+      assert(c_ops_set_ == c_set_t(c_ops_.begin(), c_ops_.end()));
 
 #endif
     }
@@ -578,6 +587,7 @@ namespace alps {
         case invalid_operation:
           break;
       }
+
     };
 
     template<

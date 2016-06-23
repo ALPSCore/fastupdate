@@ -51,6 +51,8 @@ namespace alps {
       typedef std::vector<CdaggerOp> cdagg_container_t;
       typedef std::vector<COp> c_container_t;
       typedef std::map<itime_t,int> operator_map_t;
+      typedef boost::multi_index::multi_index_container<CdaggerOp> cdagg_set_t;
+      typedef boost::multi_index::multi_index_container<COp> c_set_t;
 
       typedef typename cdagg_container_t::iterator cdagg_it;
       typedef typename c_container_t::iterator c_it;
@@ -95,6 +97,32 @@ namespace alps {
       //Getter
       inline const cdagg_container_t& get_cdagg_ops() const { return cdagg_ops_; }
       inline const c_container_t& get_c_ops() const { return c_ops_; }
+
+      /**
+       * Return a reference to a set of time-ordered creation operators
+       */
+      const cdagg_set_t& get_cdagg_ops_set() const;
+
+      /**
+       * Return a reference to a set of time-ordered creation operators for a given block
+       */
+      const cdagg_set_t& get_cdagg_ops_set(int block) const {
+        assert(block==0);
+        return get_cdagg_ops();
+      }
+
+      /**
+       * Return a reference to a set of time-ordered annihilation operators
+       */
+      const c_set_t& get_c_ops_set() const;
+
+      /**
+       * Return a reference to a set of time-ordered annihilation operators for a given block
+       */
+      const c_set_t& get_c_ops_set(int block) const {
+        assert(block==0);
+        return get_c_ops();
+      }
 
       /**
        * Compute determinant. This may suffer from overflow
@@ -178,6 +206,10 @@ namespace alps {
       //a vector of creation and annihilation operators in the order in which they appear in the rows and cols of the matrix
       cdagg_container_t cdagg_ops_;
       c_container_t c_ops_;
+
+      //Time-ordered set
+      cdagg_set_t cdagg_ops_set_;
+      c_set_t c_ops_set_;
 
       const GreensFunction gf_;
 

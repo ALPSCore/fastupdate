@@ -3,6 +3,11 @@
  */
 #pragma once
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/identity.hpp>
+
 #include <Eigen/Dense>
 
 namespace alps {
@@ -34,6 +39,8 @@ namespace alps {
       typedef Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> eigen_matrix_t;
       typedef std::vector<CdaggerOp> cdagg_container_t;
       typedef std::vector<COp> c_container_t;
+      typedef boost::multi_index::multi_index_container<CdaggerOp> cdagg_set_t;
+      typedef boost::multi_index::multi_index_container<COp> c_set_t;
 
       DeterminantMatrixBase(
         const GreensFunction& gf
@@ -49,14 +56,17 @@ namespace alps {
       /** size of matrix */
       int size() const;
 
+      /** size of block matrix */
+      int block_matrix_size(int block) const;
+
       /** number of blocks */
       int num_blocks() const;
 
-      /** size of a block */
-      int block_size(int block) const;
+      /** number of flavors belonging to a given block */
+      int num_flavors(int block) const;
 
-      /** members (flavors) belonging to a given block */
-      const std::vector<int>& block_members(int block) const;
+      /** flavors belonging to a given block */
+      const std::vector<int>& flavors(int block) const;
 
       /** return the index of the block to which a given flavor belongs to */
       const std::vector<int>& block_belonging_to(int flavor) const;
@@ -76,12 +86,32 @@ namespace alps {
       /**
        * Similar to get_cdagg_ops (without flattening over blocks)
        */
-      const cdagg_container_t& get_cdagg_ops_block(int block) const;
+      const cdagg_container_t& get_cdagg_ops(int block) const;
 
       /**
        * Similar to get_c_ops (without flattening over blocks)
        */
-      const c_container_t& get_c_ops_block() const;
+      const c_container_t& get_c_ops(int block) const;
+
+      /**
+       * Return a reference to a set of time-ordered creation operators
+       */
+      const cdagg_set_t& get_cdagg_ops_set() const;
+
+      /**
+       * Return a reference to a set of time-ordered creation operators for a given block
+       */
+      const cdagg_set_t& get_cdagg_ops_set(int block) const;
+
+      /**
+       * Return a reference to a set of time-ordered annihilation operators
+       */
+      const c_set_t& get_c_ops_set() const;
+
+      /**
+       * Return a reference to a set of time-ordered annihilation operators for a given block
+       */
+      const c_set_t& get_c_ops_set(int block) const;
 
       /**
        * Compute determinant. This may suffer from overflow

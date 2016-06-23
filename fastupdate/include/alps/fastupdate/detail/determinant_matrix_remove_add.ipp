@@ -61,6 +61,8 @@ namespace alps {
               c_ops_[nop-1-iop]
             )
           );
+          cdagg_ops_set_.erase(cdagg_ops_[nop-1-iop]);
+          c_ops_set_.erase(c_ops_[nop-1-iop]);
         }
       }
 

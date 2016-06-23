@@ -68,6 +68,9 @@ namespace alps {
       cdagg_ops_[nop-1] = new_cdagg_;
       cdagg_op_pos_.erase(operator_time(old_cdagg_));
       cdagg_op_pos_.insert(std::make_pair(operator_time(new_cdagg_), nop-1));
+
+      cdagg_ops_set_.erase(old_cdagg_);
+      cdagg_ops_set_.insert(new_cdagg_);
     }
 
     template<
@@ -145,6 +148,9 @@ namespace alps {
       c_ops_[nop-1] = new_c_;
       cop_pos_.erase(operator_time(old_c_));
       cop_pos_.insert(std::make_pair(operator_time(new_c_), nop-1));
+
+      c_ops_set_.erase(old_c_);
+      c_ops_set_.insert(new_c_);
     }
 
     template<

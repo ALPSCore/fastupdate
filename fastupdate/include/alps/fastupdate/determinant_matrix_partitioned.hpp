@@ -49,6 +49,8 @@ namespace alps {
               COp,
               DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>
             > Base;
+      typedef typename Base::cdagg_set_t cdagg_set_t;
+      typedef typename Base::c_set_t c_set_t;
 
       enum State {
         waiting = 0,
@@ -95,16 +97,24 @@ namespace alps {
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
 
       /** see determinant_matrix_base.hpp */
-      inline int num_blocks() const {return num_sectors_;}
+      inline int block_matrix_size(int block) const {
+        assert(block>=0 && block<num_blocks());
+        return p_det_mat_[block]->size();
+      };
 
       /** see determinant_matrix_base.hpp */
-      int block_size(int block) const {
+      inline int num_blocks() const {
+        return num_sectors_;
+      }
+
+      /** see determinant_matrix_base.hpp */
+      int num_flavors(int block) const {
         assert(block>=0 && block<num_blocks());
         return p_det_mat_[block]->size();
       }
 
       /** see determinant_matrix_base.hpp */
-      const std::vector<int>& block_members(int block) const {
+      const std::vector<int>& flavors(int block) const {
         return sector_members_[block];
       }
 
@@ -123,6 +133,28 @@ namespace alps {
       inline const c_container_t& get_c_ops() const {
         assert(state_==waiting);
         return c_ops_actual_order_;
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const cdagg_set_t& get_cdagg_ops_set() const {
+        throw std::runtime_error("Not implemented!");
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const c_set_t& get_c_ops_set() const {
+        throw std::runtime_error("Not implemented!");
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const cdagg_set_t& get_cdagg_ops_set(int block) const {
+        assert(block>=0 && block<num_blocks());
+        return p_det_mat_[block]->get_cdagg_ops_set(0);
+      }
+
+      /** see determinant_matrix_base.hpp */
+      const c_set_t& get_c_ops_set(int block) const {
+        assert(block>=0 && block<num_blocks());
+        return p_det_mat_[block]->get_c_ops_set(0);
       }
 
       /**
@@ -282,6 +314,7 @@ namespace alps {
       std::vector<std::vector<int> > sector_members_;     //members of each sector
       std::vector<int> sector_belonging_to_; //remember to which sector each flavor belongs
 
+      //TO DO: stop using pointers. Default copy constructor does not work as expected. We expect deep copies of objects.
       std::vector<boost::shared_ptr<BlockMatrixType> >  p_det_mat_;
 
       //permutation from a set that is time-ordered in each sector to a time-ordered set
