@@ -102,7 +102,7 @@ namespace alps {
        * Return a reference to a set of time-ordered creation operators
        */
       const cdagg_set_t& get_cdagg_ops_set() const {
-        throw std::runtime_error("Not implemented");
+        return cdagg_ops_set_;
       }
 
       /**
@@ -117,7 +117,7 @@ namespace alps {
        * Return a reference to a set of time-ordered annihilation operators
        */
       const c_set_t& get_c_ops_set() const {
-        throw std::runtime_error("Not implemented");
+        return c_ops_set_;
       }
 
       /**

@@ -219,6 +219,9 @@ namespace alps {
         return p_det_mat_[block]->compute_inverse_matrix();
       }
 
+      /**
+       * Compute the determinant ratio without actual update
+       */
       template<typename CdaggIterator, typename CIterator, typename CdaggIterator2, typename CIterator2>
       Scalar try_update(
         CdaggIterator  cdagg_rem_first,  CdaggIterator  cdagg_rem_last,
@@ -226,7 +229,15 @@ namespace alps {
         CdaggIterator2 cdagg_add_first,  CdaggIterator2 cdagg_add_last,
         CIterator2     c_add_first,      CIterator2     c_add_last
       );
+
+      /**
+       * Perform the update
+       */
       void perform_update();
+      
+      /**
+       * Cancel the update
+       */
       void reject_update();
 
       /**
