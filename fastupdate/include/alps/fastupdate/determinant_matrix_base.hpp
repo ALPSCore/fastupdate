@@ -62,9 +62,6 @@ namespace alps {
       /** number of blocks */
       int num_blocks() const;
 
-      /** number of flavors belonging to a given block */
-      int num_flavors(int block) const;
-
       /** flavors belonging to a given block */
       const std::vector<int>& flavors(int block) const;
 

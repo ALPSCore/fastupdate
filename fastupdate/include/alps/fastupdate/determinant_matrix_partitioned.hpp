@@ -110,7 +110,7 @@ namespace alps {
       /** see determinant_matrix_base.hpp */
       int num_flavors(int block) const {
         assert(block>=0 && block<num_blocks());
-        return p_det_mat_[block]->size();
+        return sector_members_[block].size();
       }
 
       /** see determinant_matrix_base.hpp */

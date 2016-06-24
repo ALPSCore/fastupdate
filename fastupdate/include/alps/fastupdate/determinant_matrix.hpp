@@ -136,19 +136,25 @@ namespace alps {
       }
 
       std::vector<Scalar> compute_determinant_as_product() const {
-        const std::vector<Scalar>& vec = detail::lu_product<Scalar>(inv_matrix_.block());
-        std::vector<Scalar> r(vec.size());
-        std::transform(
-                vec.begin(), vec.end(), r.begin(),
-                std::bind1st(
-                        std::divides<Scalar>(), (Scalar) 1.0
-                )
-        );
-        if (r.size()>0) {
-          r[0] *= 1.*permutation_row_col_;
+        if (inv_matrix_.size1() == 0) {
+          std::vector<Scalar> r(1);
+          r[0] = 1.0;
+          return r;
+        } else {
+          const std::vector<Scalar>& vec = detail::lu_product<Scalar>(inv_matrix_.block());
+          std::vector<Scalar> r(vec.size());
+          std::transform(
+              vec.begin(), vec.end(), r.begin(),
+              std::bind1st(
+                  std::divides<Scalar>(), (Scalar) 1.0
+              )
+          );
+          if (r.size()>0) {
+            r[0] *= 1.*permutation_row_col_;
+          }
+          std::sort(r.begin(), r.end(), detail::lesser_by_abs<Scalar>);
+          return r;
         }
-        std::sort(r.begin(), r.end(), detail::lesser_by_abs<Scalar>);
-        return r;
       }
 
       /**
