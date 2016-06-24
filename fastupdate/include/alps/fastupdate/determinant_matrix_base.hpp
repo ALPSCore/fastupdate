@@ -149,7 +149,7 @@ namespace alps {
       /**
        * Rebuild the matrix from scratch
        */
-      ResizableMatrix<Scalar> build_matrix();
+      ResizableMatrix<Scalar> compute_G_matrix(int block) const;
 
       /**
        * Rebuild the matrix from scratch

@@ -188,7 +188,8 @@ namespace alps {
       /**
        * Rebuild the matrix from scratch
        */
-      //ResizableMatrix<Scalar> build_matrix();
+      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>
+      compute_G_matrix() const;
 
       /**
        * Rebuild the matrix from scratch

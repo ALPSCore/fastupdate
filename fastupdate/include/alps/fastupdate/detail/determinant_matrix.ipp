@@ -397,29 +397,27 @@ namespace alps {
       sanity_check();
     }
 
-    /*
     template<
       typename Scalar,
       typename GreensFunction,
       typename CdaggerOp,
       typename COp
     >
-    ResizableMatrix<Scalar>
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::build_matrix() {
+    Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::compute_G_matrix() const {
       check_state(waiting);
 
       const int pert_order = cdagg_ops_.size();
       assert(size()==pert_order);
 
-      ResizableMatrix<Scalar> matrix(pert_order, pert_order);
+      eigen_matrix_t matrix(pert_order, pert_order);
       for (int j=0; j<pert_order; ++j) {
-        for (int i=0; i<pert_order; ++i) {
-          matrix(i,j) = gf_(c_ops_[i], cdagg_ops_[j]);
+        for (int i = 0; i < pert_order; ++i) {
+          matrix(i, j) = gf_(c_ops_[i], cdagg_ops_[j]);
         }
       }
       return matrix;
     }
-    */
 
     /*
     template<

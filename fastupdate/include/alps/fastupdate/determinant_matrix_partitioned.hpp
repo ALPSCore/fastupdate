@@ -243,7 +243,10 @@ namespace alps {
       /**
        * Rebuild the matrix from scratch
        */
-      ResizableMatrix<Scalar> build_matrix();
+      Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>
+      compute_G_matrix(int block) const {
+        return p_det_mat_[block]->compute_G_matrix();
+      };
 
       /**
        * Rebuild the matrix from scratch
