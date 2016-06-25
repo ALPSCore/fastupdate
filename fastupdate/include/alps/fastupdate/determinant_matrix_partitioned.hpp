@@ -83,15 +83,20 @@ namespace alps {
 
     public:
       DeterminantMatrixPartitioned (
-        const GreensFunction& gf
+        boost::shared_ptr<GreensFunction> p_gf
       );
 
       template<typename CdaggCIterator>
       DeterminantMatrixPartitioned (
-        const GreensFunction& gf,
+        boost::shared_ptr<GreensFunction> p_gf,
         CdaggCIterator first,
         CdaggCIterator last
       );
+
+      boost::shared_ptr<GreensFunction>
+      get_greens_function() const {
+        return p_gf_;
+      }
 
       /** see determinant_matrix_base.hpp */
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
@@ -99,7 +104,7 @@ namespace alps {
       /** see determinant_matrix_base.hpp */
       inline int block_matrix_size(int block) const {
         assert(block>=0 && block<num_blocks());
-        return p_det_mat_[block]->size();
+        return det_mat_[block].size();
       };
 
       /** see determinant_matrix_base.hpp */
@@ -138,13 +143,13 @@ namespace alps {
       /** see determinant_matrix_base.hpp */
       inline const cdagg_container_t& get_cdagg_ops(int block) const {
         assert(state_==waiting);
-        return p_det_mat_[block]->get_cdagg_ops();
+        return det_mat_[block].get_cdagg_ops();
       }
 
       /** see determinant_matrix_base.hpp */
       inline const c_container_t& get_c_ops(int block) const {
         assert(state_==waiting);
-        return p_det_mat_[block]->get_c_ops();
+        return det_mat_[block].get_c_ops();
       }
 
       /** see determinant_matrix_base.hpp */
@@ -160,13 +165,13 @@ namespace alps {
       /** see determinant_matrix_base.hpp */
       const cdagg_set_t& get_cdagg_ops_set(int block) const {
         assert(block>=0 && block<num_blocks());
-        return p_det_mat_[block]->get_cdagg_ops_set(0);
+        return det_mat_[block].get_cdagg_ops_set(0);
       }
 
       /** see determinant_matrix_base.hpp */
       const c_set_t& get_c_ops_set(int block) const {
         assert(block>=0 && block<num_blocks());
-        return p_det_mat_[block]->get_c_ops_set(0);
+        return det_mat_[block].get_c_ops_set(0);
       }
 
       /**
@@ -175,7 +180,7 @@ namespace alps {
       inline Scalar compute_determinant() const {
         Scalar r = 1.0;
         for (int sector=0; sector<num_sectors_; ++sector) {
-          r *= p_det_mat_[sector]->compute_determinant();
+          r *= det_mat_[sector].compute_determinant();
         }
         return (1.*permutation_)*r;
       }
@@ -186,7 +191,7 @@ namespace alps {
       std::vector<Scalar> compute_determinant_as_product() const {
         std::vector<Scalar> r;
         for (int sector=0; sector<num_sectors_; ++sector) {
-          const std::vector<Scalar>& vec = p_det_mat_[sector]->compute_determinant_as_product();
+          const std::vector<Scalar>& vec = det_mat_[sector].compute_determinant_as_product();
           std::copy(vec.begin(), vec.end(), std::back_inserter(r));
         }
         if (r.size() > 0) {
@@ -204,8 +209,8 @@ namespace alps {
         inv.setZero();
         int offset = 0;
         for (int sector=0; sector<num_sectors_; ++sector) {
-          int block_size = p_det_mat_[sector]->size();
-          inv.block(offset, offset, block_size, block_size) = p_det_mat_[sector]->compute_inverse_matrix();
+          int block_size = det_mat_[sector].size();
+          inv.block(offset, offset, block_size, block_size) = det_mat_[sector].compute_inverse_matrix();
           offset += block_size;
         }
         return inv;
@@ -216,7 +221,7 @@ namespace alps {
        */
       eigen_matrix_t compute_inverse_matrix(int block) const {
         assert(block>=0 && block<num_blocks());
-        return p_det_mat_[block]->compute_inverse_matrix();
+        return det_mat_[block].compute_inverse_matrix();
       }
 
       /**
@@ -245,7 +250,7 @@ namespace alps {
        */
       Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>
       compute_G_matrix(int block) const {
-        return p_det_mat_[block]->compute_G_matrix();
+        return det_mat_[block].compute_G_matrix();
       };
 
       /**
@@ -253,7 +258,7 @@ namespace alps {
        */
       void rebuild_inverse_matrix() {
         for (int sector=0; sector<num_sectors_; ++sector) {
-          p_det_mat_[sector]->rebuild_inverse_matrix();
+          det_mat_[sector].rebuild_inverse_matrix();
         }
       }
 
@@ -347,8 +352,8 @@ namespace alps {
       std::vector<std::vector<int> > sector_members_;     //members of each sector
       std::vector<int> sector_belonging_to_; //remember to which sector each flavor belongs
 
-      //TO DO: stop using pointers. Default copy constructor does not work as expected. We expect deep copies of objects.
-      std::vector<boost::shared_ptr<BlockMatrixType> >  p_det_mat_;
+      boost::shared_ptr<GreensFunction> p_gf_;
+      std::vector<BlockMatrixType>  det_mat_;
 
       //permutation from a set that is time-ordered in each sector to a time-ordered set
       int permutation_;//1 or -1
@@ -380,7 +385,7 @@ namespace alps {
         }
       }
 
-      void init(const GreensFunction& gf);
+      void init(boost::shared_ptr<GreensFunction> p_gf);
 
       inline void check_state(State state) const {
         if (state_ != state) {
@@ -393,11 +398,11 @@ namespace alps {
         c_ops_actual_order_.resize(0);
         for (int sector=0; sector<num_sectors_; ++sector) {
           const std::vector<CdaggerOp>& cdagg_ops_tmp =
-            p_det_mat_[sector]->get_cdagg_ops();
+            det_mat_[sector].get_cdagg_ops();
           std::copy(cdagg_ops_tmp.begin(), cdagg_ops_tmp.end(), std::back_inserter(cdagg_ops_actual_order_));
 
           const std::vector<COp>& c_ops_tmp =
-            p_det_mat_[sector]->get_c_ops();
+            det_mat_[sector].get_c_ops();
           std::copy(c_ops_tmp.begin(), c_ops_tmp.end(), std::back_inserter(c_ops_actual_order_));
         }
 

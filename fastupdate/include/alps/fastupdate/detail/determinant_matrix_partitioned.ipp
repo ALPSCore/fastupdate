@@ -9,14 +9,17 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::DeterminantMatrixPartitioned(const GreensFunction &gf)
-      : Base(gf),
+    DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::DeterminantMatrixPartitioned(
+        boost::shared_ptr<GreensFunction> p_gf
+    )
+      : Base(p_gf),
+        p_gf_(p_gf),
         state_(waiting),
-        num_flavors_(gf.num_flavors()),
+        num_flavors_(p_gf->num_flavors()),
         num_sectors_(-1),
         permutation_(1) {
 
-      init(gf);
+      init(p_gf);
     }
 
     template<
@@ -27,18 +30,19 @@ namespace alps {
     >
     template<typename CdaggCIterator>
     DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::DeterminantMatrixPartitioned(
-      const GreensFunction &gf,
+      boost::shared_ptr<GreensFunction> p_gf,
       CdaggCIterator first,
       CdaggCIterator last
     )
       :
-        Base(gf),
+        Base(p_gf),
+        p_gf_(p_gf),
         state_(waiting),
-        num_flavors_(gf.num_flavors()),
+        num_flavors_(p_gf->num_flavors()),
         num_sectors_(-1),
         permutation_(1) {
 
-      init(gf);
+      init(p_gf);
 
       std::vector<CdaggerOp> cdagg_ops;
       std::vector<COp> c_ops;
@@ -65,12 +69,14 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    void DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::init(const GreensFunction &gf) {
+    void DeterminantMatrixPartitioned<Scalar, GreensFunction, CdaggerOp, COp>::init(
+        boost::shared_ptr<GreensFunction> p_gf
+    ) {
       Clustering cl(num_flavors_);
       for (int flavor=0; flavor<num_flavors_; ++flavor) {
         for (int flavor2=0; flavor2<flavor; ++flavor2) {
-          assert(gf.is_connected(flavor, flavor2)==gf.is_connected(flavor2, flavor));
-          if (gf.is_connected(flavor, flavor2)) {
+          assert(p_gf->is_connected(flavor, flavor2)==p_gf->is_connected(flavor2, flavor));
+          if (p_gf->is_connected(flavor, flavor2)) {
             cl.connect_vertices(flavor, flavor2);
           }
         }
@@ -87,17 +93,15 @@ namespace alps {
       for (int flavor=0; flavor<num_flavors_; ++flavor) {
         for (int flavor2 = 0; flavor2 < flavor; ++flavor2) {
           if (sector_belonging_to_[flavor] != sector_belonging_to_[flavor2]) {
-            assert(!gf.is_connected(flavor, flavor2));
+            assert(!p_gf->is_connected(flavor, flavor2));
           }
         }
       }
 
       //Prepare DeterminantMatrix for each sector
       for (int sector=0; sector<num_sectors_; ++sector) {
-        p_det_mat_.push_back(
-          boost::shared_ptr<BlockMatrixType>(
-            new BlockMatrixType(gf)
-          )
+        det_mat_.push_back(
+          BlockMatrixType(p_gf)
         );
       }
 
@@ -175,7 +179,7 @@ namespace alps {
       //Second, compute determinant ratio from each sector
       Scalar det_rat = 1.0;
       for (int sector=0; sector<num_sectors_; ++sector) {
-        det_rat *= p_det_mat_[sector]->try_update(
+        det_rat *= det_mat_[sector].try_update(
           cdagg_ops_rem_[sector].begin(), cdagg_ops_rem_[sector].end(),
           c_ops_rem_[sector].    begin(),     c_ops_rem_[sector].end(),
           cdagg_ops_add_[sector].begin(), cdagg_ops_add_[sector].end(),
@@ -195,7 +199,7 @@ namespace alps {
     void
     DeterminantMatrixPartitioned<Scalar,GreensFunction,CdaggerOp,COp>::perform_update() {
       for (int sector=0; sector<num_sectors_; ++sector) {
-        p_det_mat_[sector]->perform_update();
+        det_mat_[sector].perform_update();
       }
       std::swap(cdagg_ops_work_, cdagg_ops_ordered_in_sectors_);
       std::swap(c_ops_work_,     c_ops_ordered_in_sectors_);
@@ -217,7 +221,7 @@ namespace alps {
     void
     DeterminantMatrixPartitioned<Scalar,GreensFunction,CdaggerOp,COp>::reject_update() {
       for (int sector=0; sector<num_sectors_; ++sector) {
-        p_det_mat_[sector]->reject_update();
+        det_mat_[sector].reject_update();
       }
       reconstruct_operator_list_in_actual_order();//Operators may be swapped even if an update is rejected.
       clear_work();
@@ -243,7 +247,7 @@ namespace alps {
 
       int pert_order = 0;
       for (int sector=0; sector<num_sectors_; ++sector) {
-        pert_order += p_det_mat_[sector]->size();
+        pert_order += det_mat_[sector].size();
       }
       assert(size()==pert_order);
 
@@ -258,10 +262,10 @@ namespace alps {
       if (state_ == waiting) {
         int iop = 0;
         for (int sector=0; sector<num_sectors_; ++sector) {
-          int sector_size = p_det_mat_[sector]->size();
+          int sector_size = det_mat_[sector].size();
           for (int i=0; i<sector_size; ++i) {
-            assert(get_cdagg_ops()[iop]==p_det_mat_[sector]->get_cdagg_ops()[i]);
-            assert(get_c_ops()[iop]==p_det_mat_[sector]->get_c_ops()[i]);
+            assert(get_cdagg_ops()[iop]==det_mat_[sector].get_cdagg_ops()[i]);
+            assert(get_c_ops()[iop]==det_mat_[sector].get_c_ops()[i]);
             ++iop;
           }
         }

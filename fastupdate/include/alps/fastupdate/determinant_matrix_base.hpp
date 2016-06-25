@@ -7,6 +7,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/identity.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <Eigen/Dense>
 
@@ -43,12 +44,12 @@ namespace alps {
       typedef boost::multi_index::multi_index_container<COp> c_set_t;
 
       DeterminantMatrixBase(
-        const GreensFunction& gf
+        boost::shared_ptr<GreensFunction>& p_gf
       ) {};
 
       template<typename CdaggCIterator>
       DeterminantMatrixBase(
-        const GreensFunction& gf,
+        boost::shared_ptr<GreensFunction>& p_gf,
         CdaggCIterator first,
         CdaggCIterator last
       ) {};

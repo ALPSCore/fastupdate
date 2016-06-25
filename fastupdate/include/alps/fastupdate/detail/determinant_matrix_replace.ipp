@@ -29,7 +29,7 @@ namespace alps {
       //compute the values of new elements
       G_j_n_.resize(nop, 1);
       for(int i=0; i<nop; ++i) {
-        G_j_n_(i, 0) = gf_(c_ops_[i], new_cdagg);
+        G_j_n_(i, 0) = p_gf_->operator()(c_ops_[i], new_cdagg);
       }
 
       //permutation sign
@@ -112,7 +112,7 @@ namespace alps {
       //compute the values of new elements
       G_n_j_.resize(1, nop);
       for(int i=0; i<nop; ++i) {
-        G_n_j_(0, i) = gf_(new_c, cdagg_ops_[i]);
+        G_n_j_(0, i) = p_gf_->operator()(new_c, cdagg_ops_[i]);
       }
 
       //permutation sign

@@ -81,12 +81,12 @@ namespace alps {
 
     public:
       DeterminantMatrix(
-        const GreensFunction& gf
+        boost::shared_ptr<GreensFunction> p_gf
       );
 
       template<typename CdaggCIterator>
       DeterminantMatrix(
-        const GreensFunction& gf,
+        boost::shared_ptr<GreensFunction> p_gf,
         CdaggCIterator first,
         CdaggCIterator last
       );
@@ -222,7 +222,7 @@ namespace alps {
       cdagg_set_t cdagg_ops_set_;
       c_set_t c_ops_set_;
 
-      const GreensFunction gf_;
+      boost::shared_ptr<GreensFunction> p_gf_;
 
       //key: the imaginary time of an operator, the index of row or col in the matrix
       operator_map_t cop_pos_, cdagg_op_pos_;
@@ -361,7 +361,7 @@ namespace alps {
       /** remove excess operators, which were inserted by add_new_operators() */
       void remove_excess_operators();
 
-      inline Scalar compute_g(int row, int col) const {return gf_(c_ops_[row], cdagg_ops_[col]); }
+      inline Scalar compute_g(int row, int col) const {return p_gf_->operator()(c_ops_[row], cdagg_ops_[col]); }
 
       /** return if there is an operator at a given time */
       inline bool exist_cdagg(const CdaggerOp& cdagg) const {

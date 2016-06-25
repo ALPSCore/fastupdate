@@ -9,12 +9,14 @@ namespace alps {
       typename CdaggerOp,
       typename COp
     >
-    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::DeterminantMatrix(const GreensFunction& gf)
-      : Base(gf),
+    DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::DeterminantMatrix(
+        boost::shared_ptr<GreensFunction> p_gf
+    )
+      : Base(p_gf),
         state_(waiting),
         inv_matrix_(0,0),
         permutation_row_col_(1),
-        gf_(gf)
+        p_gf_(p_gf)
     {
     }
 
@@ -26,15 +28,15 @@ namespace alps {
     >
     template<typename CdaggCIterator>
     DeterminantMatrix<Scalar,GreensFunction,CdaggerOp,COp>::DeterminantMatrix(
-      const GreensFunction& gf,
+      boost::shared_ptr<GreensFunction> p_gf,
       CdaggCIterator first,
       CdaggCIterator last
     )
-      : Base(gf),
+      : Base(p_gf),
         state_(waiting),
         inv_matrix_(0,0),
         permutation_row_col_(1),
-        gf_(gf)
+        p_gf_(p_gf)
     {
       try_add(first, last);
       perform_add();
@@ -386,7 +388,7 @@ namespace alps {
       inv_matrix_.destructive_resize(pert_order, pert_order);
       for (int j=0; j<pert_order; ++j) {
         for (int i=0; i<pert_order; ++i) {
-          inv_matrix_(i,j) = gf_(c_ops_[i], cdagg_ops_[j]);
+          inv_matrix_(i,j) = p_gf_->operator()(c_ops_[i], cdagg_ops_[j]);
         }
       }
       //std::cout << "matrix " << inv_matrix_ << std::endl;
@@ -413,7 +415,7 @@ namespace alps {
       eigen_matrix_t matrix(pert_order, pert_order);
       for (int j=0; j<pert_order; ++j) {
         for (int i = 0; i < pert_order; ++i) {
-          matrix(i, j) = gf_(c_ops_[i], cdagg_ops_[j]);
+          matrix(i, j) = p_gf_->opeator()(c_ops_[i], cdagg_ops_[j]);
         }
       }
       return matrix;
