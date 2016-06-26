@@ -124,7 +124,7 @@ namespace alps {
       }
 
       /** see determinant_matrix_base.hpp */
-      const std::vector<int>& block_belonging_to(int flavor) const {
+      int block_belonging_to(int flavor) const {
         return sector_belonging_to_[flavor];
       }
 
