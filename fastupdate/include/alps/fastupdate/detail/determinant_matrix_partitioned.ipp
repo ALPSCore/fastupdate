@@ -60,6 +60,8 @@ namespace alps {
         throw std::runtime_error("Initial state is singular!");
       }
       perform_update();
+
+      sanity_check();
     }
 
     //Partitioning of flavors
