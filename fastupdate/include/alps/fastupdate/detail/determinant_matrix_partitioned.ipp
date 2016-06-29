@@ -109,18 +109,34 @@ namespace alps {
       cdagg_ops_rem_.resize(num_flavors_);
       c_ops_add_.resize(num_flavors_);
       c_ops_rem_.resize(num_flavors_);
+      cdagg_times_sectored_set_.resize(num_sectors_);
+      c_times_sectored_set_.resize(num_sectors_);
     }
 
-    template<typename Op>
-    inline
-    void
-    remove_from_std_vector(std::vector<Op>& ops, const Op& val) {
-      typename std::vector<Op>::iterator it_found = std::find(ops.begin(), ops.end(), val);
-      if (it_found != ops.end()) {
-        if (it_found != ops.end()-1) {
-          std::swap(*it_found, *(ops.end()-1));
+    namespace detail {
+      //note: set.lower_bound() points the element we're going to erase.
+      template<typename T>
+      int erase_and_compute_perm_sign_change(std::set<T>& set, std::vector<std::set<T> >& sectored_set, const T& t, int target_sector) {
+        int num_ops = std::distance(set.lower_bound(t), set.end());
+        for (int sector = target_sector + 1; sector < sectored_set.size(); ++sector) {
+          num_ops += sectored_set[sector].size();
         }
-        ops.pop_back();
+        num_ops += std::distance(sectored_set[target_sector].lower_bound(t), sectored_set[target_sector].end());
+        set.erase(t);
+        sectored_set[target_sector].erase(t);
+        return num_ops%2 == 0 ? 1 : -1;
+      }
+
+      template<typename T>
+      int insert_and_compute_perm_sign_change(std::set<T>& set, std::vector<std::set<T> >& sectored_set, const T& t, int target_sector) {
+        int num_ops = std::distance(set.lower_bound(t), set.end());
+        for (int sector = target_sector + 1; sector < sectored_set.size(); ++sector) {
+          num_ops += sectored_set[sector].size();
+        }
+        num_ops += std::distance(sectored_set[target_sector].lower_bound(t), sectored_set[target_sector].end() );
+        set.insert(t);
+        sectored_set[target_sector].insert(t);
+        return num_ops%2 == 0 ? 1 : -1;
       }
     }
 
@@ -138,43 +154,37 @@ namespace alps {
       CdaggIterator2 cdagg_add_first,  CdaggIterator2 cdagg_add_last,
       CIterator2     c_add_first,      CIterator2     c_add_last
     ) {
-      cdagg_ops_work_ = cdagg_ops_ordered_in_sectors_;
-      c_ops_work_ = c_ops_ordered_in_sectors_;
+      int perm_sign_change = 1;
 
       //Creation operators to be removed
       for (CdaggIterator it=cdagg_rem_first; it!=cdagg_rem_last; ++it) {
         const int sector = sector_belonging_to_[operator_flavor(*it)];
         cdagg_ops_rem_[sector].push_back(*it);
-        remove_from_std_vector(cdagg_ops_work_, std::make_pair(sector,*it));
+        perm_sign_change *= detail::erase_and_compute_perm_sign_change(cdagg_times_set_, cdagg_times_sectored_set_, *it, sector);
       }
 
       //Annihilation operators to be removed
       for (CIterator it=c_rem_first; it!=c_rem_last; ++it) {
         const int sector = sector_belonging_to_[operator_flavor(*it)];
         c_ops_rem_[sector].push_back(*it);
-        remove_from_std_vector(c_ops_work_, std::make_pair(sector,*it) );
+        perm_sign_change *= detail::erase_and_compute_perm_sign_change(c_times_set_, c_times_sectored_set_, *it, sector);
       }
 
       //Creation operators to be added
       for (CdaggIterator2 it=cdagg_add_first; it!=cdagg_add_last; ++it) {
         const int sector = sector_belonging_to_[operator_flavor(*it)];
         cdagg_ops_add_[sector].push_back(*it);
-        cdagg_ops_work_.push_back(std::make_pair(sector, *it));
+        perm_sign_change *= detail::insert_and_compute_perm_sign_change(cdagg_times_set_, cdagg_times_sectored_set_, *it, sector);
       }
 
       //Annihilation operators to be added
       for (CIterator2 it=c_add_first; it!=c_add_last; ++it) {
         const int sector = sector_belonging_to_[operator_flavor(*it)];
         c_ops_add_[sector].push_back(*it);
-        c_ops_work_.push_back(std::make_pair(sector, *it));
+        perm_sign_change *= detail::insert_and_compute_perm_sign_change(c_times_set_, c_times_sectored_set_, *it, sector);
       }
 
-      //Count permutation (TO DO: this is too heavy)
-      detail::comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareOverSectors<CdaggerOp>());
-      detail::comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareOverSectors<COp>());
-      new_perm_ =
-        detail::comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareWithinSectors<CdaggerOp>())*
-        detail::comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareWithinSectors<COp>());
+      new_perm_ = perm_sign_change * permutation_;
 
       //Second, compute determinant ratio from each sector
       Scalar det_rat = 1.0;
@@ -187,7 +197,7 @@ namespace alps {
         );
       }
 
-      return det_rat*(1.*new_perm_/permutation_);
+      return det_rat*(1.*perm_sign_change);
     }
 
     template<
@@ -201,12 +211,11 @@ namespace alps {
       for (int sector=0; sector<num_sectors_; ++sector) {
         det_mat_[sector].perform_update();
       }
-      std::swap(cdagg_ops_work_, cdagg_ops_ordered_in_sectors_);
-      std::swap(c_ops_work_,     c_ops_ordered_in_sectors_);
 
       reconstruct_operator_list_in_actual_order();
 
       permutation_ = new_perm_;
+
       clear_work();
 
       sanity_check();
@@ -222,8 +231,28 @@ namespace alps {
     DeterminantMatrixPartitioned<Scalar,GreensFunction,CdaggerOp,COp>::reject_update() {
       for (int sector=0; sector<num_sectors_; ++sector) {
         det_mat_[sector].reject_update();
+
+        //revert the changes in the time ordered sets
+        for (int iop = 0; iop < cdagg_ops_add_[sector].size(); ++iop) {
+          cdagg_times_set_.erase(cdagg_ops_add_[sector][iop]);
+          cdagg_times_sectored_set_[sector].erase(cdagg_ops_add_[sector][iop]);
+        }
+        for (int iop = 0; iop < c_ops_add_[sector].size(); ++iop) {
+          c_times_set_.erase(c_ops_add_[sector][iop]);
+          c_times_sectored_set_[sector].erase(c_ops_add_[sector][iop]);
+        }
+        for (int iop = 0; iop < cdagg_ops_rem_[sector].size(); ++iop) {
+          cdagg_times_set_.insert(cdagg_ops_rem_[sector][iop]);
+          cdagg_times_sectored_set_[sector].insert(cdagg_ops_rem_[sector][iop]);
+        }
+        for (int iop = 0; iop < c_ops_rem_[sector].size(); ++iop) {
+          c_times_set_.insert(c_ops_rem_[sector][iop]);
+          c_times_sectored_set_[sector].insert(c_ops_rem_[sector][iop]);
+        }
+
       }
       reconstruct_operator_list_in_actual_order();//Operators may be swapped even if an update is rejected.
+
       clear_work();
     };
 
@@ -239,12 +268,26 @@ namespace alps {
       if (singular_) {
         return;
       }
-      const int N = c_ops_ordered_in_sectors_.size();
-      for (int i=0; i<N-1; ++i) {
-        assert(cdagg_ops_ordered_in_sectors_[i].first==c_ops_ordered_in_sectors_[i].first);
-        if (cdagg_ops_ordered_in_sectors_[i].first==cdagg_ops_ordered_in_sectors_[i+1].first) {
-          assert(cdagg_ops_ordered_in_sectors_[i].second < cdagg_ops_ordered_in_sectors_[i+1].second);
-          assert(c_ops_ordered_in_sectors_[i].second < c_ops_ordered_in_sectors_[i+1].second);
+
+      if (state_ == waiting) {
+        std::set<CdaggerOp> cdagg_work;
+        std::set<COp> c_work;
+        for (int sector=0; sector<num_sectors_; ++sector) {
+          cdagg_work.insert(cdagg_times_sectored_set_[sector].begin(), cdagg_times_sectored_set_[sector].end());
+          c_work.insert(c_times_sectored_set_[sector].begin(), c_times_sectored_set_[sector].end());
+        }
+        assert(cdagg_work == cdagg_times_set_);
+        assert(c_work == c_times_set_);
+        assert(cdagg_work == std::set<CdaggerOp>(cdagg_ops_actual_order_.begin(), cdagg_ops_actual_order_.end()));
+        assert(c_work == std::set<COp>(c_ops_actual_order_.begin(), c_ops_actual_order_.end()));
+      }
+
+      for (int sector=0; sector<num_sectors_; ++sector) {
+        for (typename std::set<CdaggerOp>::iterator it = cdagg_times_sectored_set_[sector].begin(); it != cdagg_times_sectored_set_[sector].end(); ++it) {
+          assert(block_belonging_to(it->flavor()) == sector);
+        }
+        for (typename std::set<COp>::iterator it = c_times_sectored_set_[sector].begin(); it != c_times_sectored_set_[sector].end(); ++it) {
+          assert(block_belonging_to(it->flavor()) == sector);
         }
       }
 
@@ -254,11 +297,20 @@ namespace alps {
       }
       assert(size()==pert_order);
 
-      detail::comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareOverSectors<CdaggerOp>());
-      detail::comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareOverSectors<COp>());
+      std::vector<std::pair<int,CdaggerOp> > cdagg_ops_work;
+      std::vector<std::pair<int,COp> > c_ops_work;
+      for (typename std::set<CdaggerOp>::iterator it = cdagg_times_set_.begin(); it != cdagg_times_set_.end(); ++it) {
+        cdagg_ops_work.push_back(std::make_pair(block_belonging_to(it->flavor()), *it));
+      }
+      for (typename std::set<COp>::iterator it = c_times_set_.begin(); it != c_times_set_.end(); ++it) {
+        c_ops_work.push_back(std::make_pair(block_belonging_to(it->flavor()), *it));
+      }
+
+      detail::comb_sort(cdagg_ops_work.begin(), cdagg_ops_work.end(), CompareOverSectors<CdaggerOp>());
+      detail::comb_sort(c_ops_work.begin(),     c_ops_work.end(),     CompareOverSectors<COp>());
       const int perm_recomputed =
-        detail::comb_sort(cdagg_ops_ordered_in_sectors_.begin(), cdagg_ops_ordered_in_sectors_.end(), CompareWithinSectors<CdaggerOp>())*
-        detail::comb_sort(c_ops_ordered_in_sectors_.begin(),     c_ops_ordered_in_sectors_.end(),     CompareWithinSectors<COp>());
+        detail::comb_sort(cdagg_ops_work.begin(), cdagg_ops_work.end(), CompareWithinSectors<CdaggerOp>())*
+        detail::comb_sort(c_ops_work.begin(),     c_ops_work.end(),     CompareWithinSectors<COp>());
       assert(permutation_ == perm_recomputed);
 
       //check list of operators in actual order

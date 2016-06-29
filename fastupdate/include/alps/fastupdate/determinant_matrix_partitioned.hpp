@@ -51,6 +51,7 @@ namespace alps {
             > Base;
       typedef typename Base::cdagg_set_t cdagg_set_t;
       typedef typename Base::c_set_t c_set_t;
+      typedef typename CdaggerOp::itime_type iTimeType;
 
       enum State {
         waiting = 0,
@@ -99,7 +100,7 @@ namespace alps {
       }
 
       /** see determinant_matrix_base.hpp */
-      inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
+      inline int size() const {return cdagg_times_set_.size();};
 
       /** see determinant_matrix_base.hpp */
       inline bool is_singular() const {return singular_;}
@@ -380,18 +381,24 @@ namespace alps {
       //a vector of creation and annihilation operators time-ordered in each sector
       //first element: sector
       //second element: operator
-      std::vector<std::pair<int,CdaggerOp> > cdagg_ops_ordered_in_sectors_;
-      std::vector<std::pair<int,COp> > c_ops_ordered_in_sectors_;
+      //std::vector<std::pair<int,CdaggerOp> > cdagg_ops_ordered_in_sectors_;
+      //std::vector<std::pair<int,COp> > c_ops_ordered_in_sectors_;
 
       //Creation and annihilation operators in the same as appearing in the block matrices (not always time-ordered at all)
       //They are expected to be well-defined only when state is "waiting".
       mutable std::vector<CdaggerOp> cdagg_ops_actual_order_;
       mutable std::vector<COp> c_ops_actual_order_;
 
+      //time-ordered set
+      std::set<CdaggerOp> cdagg_times_set_;
+      std::set<COp> c_times_set_;
+      std::vector<std::set<CdaggerOp> > cdagg_times_sectored_set_;
+      std::vector<std::set<COp> > c_times_sectored_set_;
+
       //for update
       int new_perm_;
-      std::vector<std::pair<int,CdaggerOp> > cdagg_ops_work_;
-      std::vector<std::pair<int,COp> > c_ops_work_;
+      //std::vector<std::pair<int,CdaggerOp> > cdagg_ops_work_;
+      //std::vector<std::pair<int,COp> > c_ops_work_;
       std::vector<std::vector<CdaggerOp> > cdagg_ops_add_, cdagg_ops_rem_;
       std::vector<std::vector<COp> > c_ops_add_, c_ops_rem_;
 
