@@ -15,6 +15,7 @@ namespace alps {
       : Base(p_gf),
         p_gf_(p_gf),
         state_(waiting),
+        singular_(false),
         num_flavors_(p_gf->num_flavors()),
         num_sectors_(-1),
         permutation_(1) {
@@ -38,6 +39,7 @@ namespace alps {
         Base(p_gf),
         p_gf_(p_gf),
         state_(waiting),
+        singular_(false),
         num_flavors_(p_gf->num_flavors()),
         num_sectors_(-1),
         permutation_(1) {
@@ -56,11 +58,7 @@ namespace alps {
         cdagg_ops.begin(), cdagg_ops.end(),
         c_ops.begin(),     c_ops.end()
       );
-      if (det_rat == 0.0) {
-        throw std::runtime_error("Initial state is singular!");
-      }
       perform_update();
-
       sanity_check();
     }
 
@@ -171,7 +169,7 @@ namespace alps {
         c_ops_work_.push_back(std::make_pair(sector, *it));
       }
 
-      //Count permutation
+      //Count permutation (TO DO: this is too heavy)
       detail::comb_sort(cdagg_ops_work_.begin(), cdagg_ops_work_.end(), CompareOverSectors<CdaggerOp>());
       detail::comb_sort(c_ops_work_.begin(),     c_ops_work_.end(),     CompareOverSectors<COp>());
       new_perm_ =
@@ -238,6 +236,9 @@ namespace alps {
     void
     DeterminantMatrixPartitioned<Scalar,GreensFunction,CdaggerOp,COp>::sanity_check() {
 #ifndef NDEBUG
+      if (singular_) {
+        return;
+      }
       const int N = c_ops_ordered_in_sectors_.size();
       for (int i=0; i<N-1; ++i) {
         assert(cdagg_ops_ordered_in_sectors_[i].first==c_ops_ordered_in_sectors_[i].first);

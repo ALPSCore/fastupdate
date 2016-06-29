@@ -57,6 +57,9 @@ namespace alps {
       /** size of matrix */
       int size() const;
 
+      /** return if the matrix is singular */
+      bool is_singular() const;
+
       /** size of block matrix */
       int block_matrix_size(int block) const;
 

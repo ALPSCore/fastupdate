@@ -102,8 +102,14 @@ namespace alps {
       inline int size() const {return cdagg_ops_ordered_in_sectors_.size();};
 
       /** see determinant_matrix_base.hpp */
+      inline bool is_singular() const {return singular_;}
+
+      /** see determinant_matrix_base.hpp */
       inline int block_matrix_size(int block) const {
         assert(block>=0 && block<num_blocks());
+        if (singular_) {
+          throw std::runtime_error("Matrix is singular!");
+        }
         return det_mat_[block].size();
       };
 
@@ -178,6 +184,9 @@ namespace alps {
        * Compute determinant. This may suffer from overflow
        */
       inline Scalar compute_determinant() const {
+        if (singular_) {
+          return 0.0;
+        }
         Scalar r = 1.0;
         for (int sector=0; sector<num_sectors_; ++sector) {
           r *= det_mat_[sector].compute_determinant();
@@ -190,6 +199,9 @@ namespace alps {
        */
       std::vector<Scalar> compute_determinant_as_product() const {
         std::vector<Scalar> r;
+        if (singular_) {
+          return std::vector<Scalar>(1, (Scalar)0.0);
+        }
         for (int sector=0; sector<num_sectors_; ++sector) {
           const std::vector<Scalar>& vec = det_mat_[sector].compute_determinant_as_product();
           std::copy(vec.begin(), vec.end(), std::back_inserter(r));
@@ -205,6 +217,9 @@ namespace alps {
        * Compute inverse matrix. The rows and cols may not be time-ordered.
        */
       eigen_matrix_t compute_inverse_matrix() const {
+        if (singular_) {
+          throw std::runtime_error("Inverse matrix is not available because the matrix is singular!");
+        }
         eigen_matrix_t inv(size(), size());
         inv.setZero();
         int offset = 0;
@@ -221,6 +236,9 @@ namespace alps {
        */
       eigen_matrix_t compute_inverse_matrix(int block) const {
         assert(block>=0 && block<num_blocks());
+        if (singular_) {
+          throw std::runtime_error("Inverse matrix is not available because the matrix is singular!");
+        }
         return det_mat_[block].compute_inverse_matrix();
       }
 
@@ -346,6 +364,7 @@ namespace alps {
 
 
       State state_;
+      bool singular_;
 
       int num_flavors_;                     //number of flavors
       int num_sectors_;                     //number of sectors
