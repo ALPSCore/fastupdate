@@ -115,8 +115,8 @@ namespace alps {
 
     namespace detail {
       //note: set.lower_bound() points the element we're going to erase.
-      template<typename T>
-      int erase_and_compute_perm_sign_change(std::set<T>& set, std::vector<std::set<T> >& sectored_set, const T& t, int target_sector) {
+      template<typename SET, typename T>
+      int erase_and_compute_perm_sign_change(SET& set, std::vector<SET>& sectored_set, const T& t, int target_sector) {
         int num_ops = std::distance(set.lower_bound(t), set.end());
         for (int sector = target_sector + 1; sector < sectored_set.size(); ++sector) {
           num_ops += sectored_set[sector].size();
@@ -127,8 +127,8 @@ namespace alps {
         return num_ops%2 == 0 ? 1 : -1;
       }
 
-      template<typename T>
-      int insert_and_compute_perm_sign_change(std::set<T>& set, std::vector<std::set<T> >& sectored_set, const T& t, int target_sector) {
+      template<typename SET, typename T>
+      int insert_and_compute_perm_sign_change(SET& set, std::vector<SET>& sectored_set, const T& t, int target_sector) {
         int num_ops = std::distance(set.lower_bound(t), set.end());
         for (int sector = target_sector + 1; sector < sectored_set.size(); ++sector) {
           num_ops += sectored_set[sector].size();
@@ -231,25 +231,36 @@ namespace alps {
     DeterminantMatrixPartitioned<Scalar,GreensFunction,CdaggerOp,COp>::reject_update() {
       for (int sector=0; sector<num_sectors_; ++sector) {
         det_mat_[sector].reject_update();
+      }
 
-        //revert the changes in the time ordered sets
+      //revert the changes in the time ordered sets
+      //make sure the operators inserted first must be remove last
+      for (int sector=0; sector<num_sectors_; ++sector) {
         for (int iop = 0; iop < cdagg_ops_add_[sector].size(); ++iop) {
           cdagg_times_set_.erase(cdagg_ops_add_[sector][iop]);
           cdagg_times_sectored_set_[sector].erase(cdagg_ops_add_[sector][iop]);
         }
+      }
+
+      for (int sector=0; sector<num_sectors_; ++sector) {
         for (int iop = 0; iop < c_ops_add_[sector].size(); ++iop) {
           c_times_set_.erase(c_ops_add_[sector][iop]);
           c_times_sectored_set_[sector].erase(c_ops_add_[sector][iop]);
         }
+      }
+
+      for (int sector=0; sector<num_sectors_; ++sector) {
         for (int iop = 0; iop < cdagg_ops_rem_[sector].size(); ++iop) {
           cdagg_times_set_.insert(cdagg_ops_rem_[sector][iop]);
           cdagg_times_sectored_set_[sector].insert(cdagg_ops_rem_[sector][iop]);
         }
+      }
+
+      for (int sector=0; sector<num_sectors_; ++sector) {
         for (int iop = 0; iop < c_ops_rem_[sector].size(); ++iop) {
           c_times_set_.insert(c_ops_rem_[sector][iop]);
           c_times_sectored_set_[sector].insert(c_ops_rem_[sector][iop]);
         }
-
       }
       reconstruct_operator_list_in_actual_order();//Operators may be swapped even if an update is rejected.
 
@@ -271,7 +282,7 @@ namespace alps {
 
       if (state_ == waiting) {
         std::set<CdaggerOp> cdagg_work;
-        std::set<COp> c_work;
+        std::set<COp>  c_work;
         for (int sector=0; sector<num_sectors_; ++sector) {
           cdagg_work.insert(cdagg_times_sectored_set_[sector].begin(), cdagg_times_sectored_set_[sector].end());
           c_work.insert(c_times_sectored_set_[sector].begin(), c_times_sectored_set_[sector].end());
