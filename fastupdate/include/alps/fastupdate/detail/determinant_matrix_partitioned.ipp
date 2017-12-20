@@ -281,23 +281,23 @@ namespace alps {
       }
 
       if (state_ == waiting) {
-        std::set<CdaggerOp> cdagg_work;
-        std::set<COp>  c_work;
+        cdagg_set_t cdagg_work;
+        c_set_t c_work;
         for (int sector=0; sector<num_sectors_; ++sector) {
           cdagg_work.insert(cdagg_times_sectored_set_[sector].begin(), cdagg_times_sectored_set_[sector].end());
           c_work.insert(c_times_sectored_set_[sector].begin(), c_times_sectored_set_[sector].end());
         }
         assert(cdagg_work == cdagg_times_set_);
         assert(c_work == c_times_set_);
-        assert(cdagg_work == std::set<CdaggerOp>(cdagg_ops_actual_order_.begin(), cdagg_ops_actual_order_.end()));
-        assert(c_work == std::set<COp>(c_ops_actual_order_.begin(), c_ops_actual_order_.end()));
+        assert(cdagg_work == cdagg_set_t(cdagg_ops_actual_order_.begin(), cdagg_ops_actual_order_.end()));
+        assert(c_work == c_set_t(c_ops_actual_order_.begin(), c_ops_actual_order_.end()));
       }
 
       for (int sector=0; sector<num_sectors_; ++sector) {
-        for (typename std::set<CdaggerOp>::iterator it = cdagg_times_sectored_set_[sector].begin(); it != cdagg_times_sectored_set_[sector].end(); ++it) {
+        for (typename cdagg_set_t::iterator it = cdagg_times_sectored_set_[sector].begin(); it != cdagg_times_sectored_set_[sector].end(); ++it) {
           assert(block_belonging_to(it->flavor()) == sector);
         }
-        for (typename std::set<COp>::iterator it = c_times_sectored_set_[sector].begin(); it != c_times_sectored_set_[sector].end(); ++it) {
+        for (typename c_set_t::iterator it = c_times_sectored_set_[sector].begin(); it != c_times_sectored_set_[sector].end(); ++it) {
           assert(block_belonging_to(it->flavor()) == sector);
         }
       }
@@ -310,10 +310,10 @@ namespace alps {
 
       std::vector<std::pair<int,CdaggerOp> > cdagg_ops_work;
       std::vector<std::pair<int,COp> > c_ops_work;
-      for (typename std::set<CdaggerOp>::iterator it = cdagg_times_set_.begin(); it != cdagg_times_set_.end(); ++it) {
+      for (typename cdagg_set_t::iterator it = cdagg_times_set_.begin(); it != cdagg_times_set_.end(); ++it) {
         cdagg_ops_work.push_back(std::make_pair(block_belonging_to(it->flavor()), *it));
       }
-      for (typename std::set<COp>::iterator it = c_times_set_.begin(); it != c_times_set_.end(); ++it) {
+      for (typename c_set_t::iterator it = c_times_set_.begin(); it != c_times_set_.end(); ++it) {
         c_ops_work.push_back(std::make_pair(block_belonging_to(it->flavor()), *it));
       }
 
