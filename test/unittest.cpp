@@ -1,5 +1,24 @@
 #include "unittest.hpp"
 
+TEST(ResizableMatrix, PhaseOfDeterminant)
+{
+  using namespace alps::fastupdate;
+
+  int N = 2;
+
+  using Scalar = std::complex<double>;
+  ResizableMatrix<Scalar> matrix(N, N);
+
+  for (int j=0; j<N; ++j) {
+    for (int i=0; i<N; ++i) {
+      matrix(i,j) = Scalar(i + 3.141519*j*j + 0.1, 1.4*j + 0.2);
+    }
+  }
+
+  Scalar det = matrix.determinant();
+  ASSERT_TRUE(std::abs(det/std::abs(det) - phase_of_determinant(matrix)) < 1e-10);
+}
+
 
 TEST(FastUpdate, BlockMatrixAdd)
 {
